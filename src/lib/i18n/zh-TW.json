@@ -40,6 +40,20 @@
       "分散式系統共識演算法"
     ]
   },
+  "library": {
+    "title": "Your crafts（地圖庫）",
+    "subtitle": "所有由您自訂並規劃的學習地圖，進度與教材皆妥善保存在瀏覽器本機。",
+    "searchPlaceholder": "搜尋地圖名稱或學習主題...",
+    "emptyTitle": "尚無任何學習地圖",
+    "emptyDesc": "輸入任何您想學習的領域或技能，AI 將為您繪製專屬的第一張學習地圖。",
+    "craftMap": "Craft a map",
+    "deleteConfirm": "確定要刪除這張地圖嗎？相關的學習進度與教材快取將一併移除且無法復原。",
+    "nodesCount": "{{count}} 個知識點",
+    "editTitleAria": "編輯地圖名稱",
+    "saveTitleAria": "確認修改名稱",
+    "cancelTitleAria": "取消修改",
+    "deleteMapAria": "刪除地圖"
+  },
   "settings": {
     "title": "設定與供應商連線",
     "subtitle": "自備 LLM API 金鑰（BYOK），所有憑證僅儲存於本機瀏覽器中，絕不上傳第三方伺服器。",
@@ -64,6 +78,34 @@
     "showKeyAria": "顯示金鑰（10 秒後自動遮罩）",
     "hideKeyAria": "隱藏金鑰",
     "ollamaNotice": "本機 Ollama 提示：請確認 Ollama 伺服器已啟動，並在啟動時加上環境變數 OLLAMA_ORIGINS=\"*\" 以允許瀏覽器跨域呼叫。"
+  },
+  "generation": {
+    "levelLabel": "目前熟悉程度",
+    "levelBeginner": "初學者（完全沒接觸過）",
+    "levelSome": "略懂（看過技術文章或概念）",
+    "levelAdvanced": "進階（已有實際專案經驗）",
+    "goalLabel": "學習目標或期望成果",
+    "goalPlaceholder": "例如：想在兩週內能獨立建構微服務並排查常見故障",
+    "timeBudgetLabel": "可用總學習時間",
+    "timeBudgetUnit": "小時",
+    "advancedOptions": "生成進階設定",
+    "hideAdvancedOptions": "收合進階設定",
+    "maxDepthLabel": "地圖深度上限（層級）",
+    "maxBreadthLabel": "每層節點廣度上限",
+    "maxNodesLabel": "總學習節點數上限",
+    "temperatureLabel": "創意度與發散性（Temperature）",
+    "planning": "正在規劃學習路徑...",
+    "generatingWait": "AI 正針對主題深入拆解核心知識點與先後依賴關係，請稍候...",
+    "cancelGeneration": "取消生成",
+    "generationCancelled": "已取消地圖生成",
+    "missingKeyTitle": "尚未設定 API 金鑰",
+    "missingKeyDesc": "MapCraft 為純前端無後端架構，請先前往「設定」填入您個人的 LLM API 金鑰即可開始使用。",
+    "goToSettings": "前往設定金鑰",
+    "retryRelaxed": "放寬參數重試（簡化地圖結構）",
+    "viewRawOutput": "查看原始模型輸出",
+    "rawOutputTitle": "LLM 原始輸出記錄",
+    "copyRawOutput": "複製原始文字",
+    "copied": "已複製！"
   },
   "errors": {
     "notFoundTitle": "找不到頁面",

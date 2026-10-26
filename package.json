@@ -14,19 +14,23 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "d3-hierarchy": "^3.1.2",
     "dexie": "^4.4.7",
     "i18next": "^26.5.10",
     "lucide-react": "^1.61.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^17.1.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
     "@tailwindcss/vite": "^4.0.9",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

@@ -87,3 +87,15 @@ export interface ProviderConfig {
   headers?: Record<string, string>; // 使用者自訂（Azure api-key 等）
   azure?: { apiVersion: string; deployment: string };
 }
+
+/** 純領域層 Prompt 請求結構（不依賴任何外部或網路層） */
+export interface PromptRequest {
+  system: string;
+  user: string;
+  temperature: number;
+  maxOutputTokens: number;
+  jsonSchema?: object;
+  schemaName?: string;
+  signal?: AbortSignal;
+}
+
