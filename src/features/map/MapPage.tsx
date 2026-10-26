@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper } from 'lucide-react';
+import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper, Download, FileText } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus } from '@/domain/types';
 import { countLearningNodes } from '@/domain/tree';
+import { generateMapMarkdown } from '@/domain/export/markdown';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
+import { lessonsRepo } from '@/lib/db/repos/lessons';
+import { createBackupData, downloadBackupFile, downloadBlob } from '@/lib/storage/backup';
 import { LessonDrawer } from '@/features/lesson/LessonDrawer';
 import { MapCanvas } from './MapCanvas';
 
@@ -222,6 +225,31 @@ export function MapPage() {
     );
   }
 
+  // 匯出 Markdown 筆記
+  const handleExportMarkdown = async () => {
+    if (!map) return;
+    try {
+      const lessons = await lessonsRepo.getByMapId(map.id);
+      const mdContent = generateMapMarkdown(map, progressList, lessons);
+      const safeTitle = map.title.replace(/[\\/:*?"<>|]/g, '_');
+      downloadBlob(`${safeTitle}.md`, mdContent, 'text/markdown;charset=utf-8');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // 匯出單張地圖備份
+  const handleExportBackup = async () => {
+    if (!map) return;
+    try {
+      const backup = await createBackupData(map.id);
+      const safeTitle = map.title.replace(/[\\/:*?"<>|]/g, '_');
+      downloadBackupFile(backup, safeTitle);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   // 狀態 4：正常成功渲染畫布與抽屜（Success）
   return (
     <div className="relative flex flex-1 flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden">
@@ -235,17 +263,44 @@ export function MapPage() {
         />
       </div>
 
-      {/* 底部浮動資訊列 */}
-      <div className="absolute bottom-4 left-4 z-10 hidden sm:flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-300">
-        <span className="font-medium">
-          {t('topbar.progressLabel', {
-            done: doneCount,
-            total: totalCount,
-            percent,
-          })}
-        </span>
-        <span className="text-slate-300 dark:text-slate-700">|</span>
-        <span className="text-[11px] text-slate-400">點擊節點開啟微教學抽屜</span>
+      {/* 底部浮動資訊列與匯出操作 */}
+      <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-300">
+          <span className="font-medium">
+            {t('topbar.progressLabel', {
+              done: doneCount,
+              total: totalCount,
+              percent,
+            })}
+          </span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <span className="text-[11px] text-slate-400">點擊節點開啟微教學抽屜</span>
+        </div>
+
+        {/* 匯出操作按鈕 */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleExportMarkdown}
+            aria-label={t('map.exportMarkdown')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <FileText className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">{t('map.exportMarkdown')}</span>
+            <span className="sm:hidden">Markdown</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            aria-label={t('map.exportBackup')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <Download className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">{t('map.exportBackup')}</span>
+            <span className="sm:hidden">備份</span>
+          </button>
+        </div>
       </div>
 
       {/* 低調慶祝橫條（全數完成時顯示） */}

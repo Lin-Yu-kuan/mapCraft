@@ -9,6 +9,9 @@ import {
   AlertCircle,
   Loader2,
   HelpCircle,
+  Database,
+  Trash2,
+  HardDrive,
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -21,9 +24,10 @@ import {
   setStorageMode as saveStorageMode,
   getStoredApiKey,
   setStoredApiKey,
+  clearStoredApiKey,
   type StorageMode,
 } from '@/lib/storage/settings';
-import { settingsRepo } from '@/lib/db';
+import { settingsRepo, db } from '@/lib/db';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -46,12 +50,57 @@ export function SettingsPage() {
     errorMsg?: string;
   } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [dataStats, setDataStats] = useState({ maps: 0, progress: 0, lessons: 0 });
 
   const hideKeyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeMeta = getProviderMeta(providerId);
 
+  const refreshStats = async () => {
+    try {
+      const [maps, progress, lessons] = await Promise.all([
+        db.maps.count(),
+        db.progress.count(),
+        db.lessons.count(),
+      ]);
+      setDataStats({ maps, progress, lessons });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleClearLessons = async () => {
+    try {
+      await db.lessons.clear();
+      await refreshStats();
+      alert(t('settings.clearLessonsSuccess'));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleResetAll = async () => {
+    if (confirm(t('settings.clearAllConfirm'))) {
+      try {
+        await Promise.all([
+          db.maps.clear(),
+          db.progress.clear(),
+          db.lessons.clear(),
+          db.kv.clear(),
+        ]);
+        // 清除各 provider 金鑰
+        allProviders.forEach((p) => clearStoredApiKey(p.id));
+        await refreshStats();
+        alert(t('settings.clearAllSuccess'));
+        window.location.reload();
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : String(err));
+      }
+    }
+  };
+
   // 初始化載入
   useEffect(() => {
+    refreshStats();
     async function loadInitial() {
       const mode = getStorageMode();
       setStorageMode(mode);
@@ -426,6 +475,70 @@ export function SettingsPage() {
           </div>
         )}
       </form>
+
+      {/* T4.3 資料儲存與用量管理 */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-950 space-y-5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <Database className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              {t('settings.dataTitle')}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.dataSubtitle')}
+            </p>
+          </div>
+        </div>
+
+        {/* 統計指標卡 */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-center dark:border-slate-800 dark:bg-slate-900/50">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('settings.mapsCount')}
+            </span>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{dataStats.maps}</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-center dark:border-slate-800 dark:bg-slate-900/50">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('settings.progressCount')}
+            </span>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+              {dataStats.progress}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-center dark:border-slate-800 dark:bg-slate-900/50">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('settings.lessonsCount')}
+            </span>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+              {dataStats.lessons}
+            </p>
+          </div>
+        </div>
+
+        {/* 資料管理操作按鈕 */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800/80">
+          <button
+            type="button"
+            onClick={handleClearLessons}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <HardDrive className="h-3.5 w-3.5 text-amber-500" />
+            <span>{t('settings.clearLessons')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetAll}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>{t('settings.clearAllData')}</span>
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

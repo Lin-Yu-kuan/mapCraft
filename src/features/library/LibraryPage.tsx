@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -14,12 +14,15 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  Download,
+  Upload,
 } from 'lucide-react';
 
 import type { LearningMap, NodeProgress } from '@/domain/types';
 import { countLearningNodes } from '@/domain/tree';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
+import { createBackupData, downloadBackupFile, importBackupData } from '@/lib/storage/backup';
 
 interface MapWithProgress {
   map: LearningMap;
@@ -132,8 +135,60 @@ export function LibraryPage() {
     }
   };
 
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 匯出全部備份
+  const handleExportBackup = async () => {
+    try {
+      const backup = await createBackupData();
+      downloadBackupFile(backup, 'mapcraft_all_backup');
+      setSuccessMsg('備份檔案已成功下載！');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // 匯入備份
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const res = await importBackupData(text);
+      setSuccessMsg(
+        t('library.importSuccess', {
+          maps: res.mapsImported,
+          progress: res.progressImported,
+          lessons: res.lessonsImported,
+        })
+      );
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await loadMaps();
+    } catch (err: unknown) {
+      setError(
+        `${t('library.importFailed')} ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-6">
+      {/* 隱藏的檔案選擇器 */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".json,.mapcraft.json"
+        className="hidden"
+      />
+
       {/* 標題欄 */}
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
         <div>
@@ -144,14 +199,47 @@ export function LibraryPage() {
             {t('library.subtitle')}
           </p>
         </div>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-xl bg-emerald-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs transition-all hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          <span>{t('nav.newCraft')}</span>
-        </Link>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <Download className="h-4 w-4" />
+              <span>{t('library.exportBackup')}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <Upload className="h-4 w-4" />
+            <span>{t('library.importBackup')}</span>
+          </button>
+
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs transition-all hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            <span>{t('nav.newCraft')}</span>
+          </Link>
+        </div>
       </div>
+
+      {/* 成功通知 */}
+      {successMsg && (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMsg}</span>
+          </div>
+        </div>
+      )}
 
       {/* 錯誤通知 */}
       {error && (

@@ -52,7 +52,16 @@
     "editTitleAria": "編輯地圖名稱",
     "saveTitleAria": "確認修改名稱",
     "cancelTitleAria": "取消修改",
-    "deleteMapAria": "刪除地圖"
+    "deleteMapAria": "刪除地圖",
+    "exportBackup": "匯出備份",
+    "importBackup": "匯入備份",
+    "importSuccess": "成功匯入 {{maps}} 張地圖、{{progress}} 筆進度與 {{lessons}} 份教材！",
+    "importFailed": "匯入失敗："
+  },
+  "map": {
+    "exportMarkdown": "匯出 Markdown 筆記",
+    "exportBackup": "匯出地圖備份",
+    "exported": "已下載！"
   },
   "lesson": {
     "drawerTitle": "節點教學",
@@ -98,7 +107,17 @@
     "savedSuccess": "設定已成功儲存！",
     "showKeyAria": "顯示金鑰（10 秒後自動遮罩）",
     "hideKeyAria": "隱藏金鑰",
-    "ollamaNotice": "本機 Ollama 提示：請確認 Ollama 伺服器已啟動，並在啟動時加上環境變數 OLLAMA_ORIGINS=\"*\" 以允許瀏覽器跨域呼叫。"
+    "ollamaNotice": "本機 Ollama 提示：請確認 Ollama 伺服器已啟動，並在啟動時加上環境變數 OLLAMA_ORIGINS=\"*\" 以允許瀏覽器跨域呼叫。",
+    "dataTitle": "資料儲存與用量管理",
+    "dataSubtitle": "所有地圖、進度與教材快取均存於瀏覽器本機 IndexedDB 中。",
+    "mapsCount": "已建立地圖數",
+    "progressCount": "學習進度記錄",
+    "lessonsCount": "已快取教材筆數",
+    "clearLessons": "清除教材快取",
+    "clearLessonsSuccess": "已成功清除教材快取！",
+    "clearAllData": "重設所有本機資料",
+    "clearAllConfirm": "警告：此操作將徹底清空本機的所有地圖、進度、教材快取與 API 金鑰設定，且無法復原。確定要重置嗎？",
+    "clearAllSuccess": "所有本機資料已重設為初始狀態。"
   },
   "generation": {
     "levelLabel": "目前熟悉程度",
