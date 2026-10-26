@@ -1,0 +1,36 @@
+{
+  "title": "Spring Boot 核心概念",
+  "summary": "掌握 Spring Boot 自動配置與常用微服務元件",
+  "nodes": [
+    {
+      "id": "1",
+      "label": "IoC 與依賴注入",
+      "summary": "理解 Spring 容器的核心控制反轉與 Bean 生命週期",
+      "difficulty": "beginner",
+      "estMinutes": 30,
+      "children": [
+        {
+          "id": "1.1",
+          "label": "Bean 的宣告與配置",
+          "summary": "學習 @Component 與 @Bean 的差異與使用時機",
+          "difficulty": "beginner",
+          "estMinutes": 20
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "自動配置原理",
+      "summary": "探索 @EnableAutoConfiguration 與條件式註解",
+      "difficulty": "intermediate",
+      "estMinutes": 45
+    },
+    {
+      "id": "3",
+      "label": "Spring Data JPA",
+      "summary": "資料庫存取抽象與 Repository 模式實務",
+      "difficulty": "intermediate",
+      "estMinutes": 45
+    }
+  ]
+}

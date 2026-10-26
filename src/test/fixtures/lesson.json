@@ -1,0 +1,30 @@
+{
+  "concept": "依賴注入（Dependency Injection，簡稱 DI）是一種軟體設計模式，物件不自行實例化其依賴項，而是由外部容器在運行時主動傳遞注入。它達成了高內聚低耦合的架構，是現代應用程式可測試性的基石。",
+  "why": "如果不使用依賴注入，各個類別內部會硬編碼相依物件的建構邏輯，導致難以進行單元測試（無法注入 Mock 物件），且未來替換實作時必須修改大量程式碼。",
+  "example": {
+    "scenario": "訂單服務需要通知模組發送 Email",
+    "language": "typescript",
+    "code": "class OrderService {\n  constructor(private notifier: NotificationService) {}\n  placeOrder() {\n    this.notifier.send('訂單已成立');\n  }\n}",
+    "explain": "OrderService 透過建構子被動接收 NotificationService，而非直接 new 出具體實作。"
+  },
+  "pitfalls": [
+    "過度濫用字段注入（Field Injection）導致無法在無容器環境下測試",
+    "在循環依賴的兩個類別間互相注入造成容器啟動失敗"
+  ],
+  "keyPoints": [
+    "控制反轉（IoC）是概念，依賴注入（DI）是具體實作手法",
+    "優先推薦使用建構子注入（Constructor Injection）",
+    "依賴抽象介面而非具體實作"
+  ],
+  "quiz": {
+    "question": "為什麼在實務上通常推薦使用建構子注入（Constructor Injection）而非字段注入（Field Injection）？",
+    "options": [
+      "建構子注入能保證依賴物件不可變（final）且在未啟動框架時即可進行單元測試",
+      "字段注入的運行效能遠低於建構子注入",
+      "建構子注入支援熱加載而字段注入不支援",
+      "建構子注入是唯一支援單例模式的注入方式"
+    ],
+    "answerIndex": 0,
+    "explanation": "建構子注入能清楚表達該類別所需的必要依賴，並允許在純單元測試中透過 new 傳入 mock，同時利於將欄位設為不可變。"
+  }
+}
