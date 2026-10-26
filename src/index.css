@@ -1,8 +1,43 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-fallback: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+
+    /* 畫布與節點尺寸設計 Token（SPEC §6.2） */
+    --node-width-min: 220px;
+    --node-width-max: 260px;
+    --node-height-min: 64px;
+    --node-height-max: 80px;
+    --drawer-width: 480px;
+
+    /* 語意化難度色（SPEC §6.2） */
+    --color-difficulty-beginner: #10b981;
+    --color-difficulty-beginner-bg: #ecfdf5;
+    --color-difficulty-intermediate: #3b82f6;
+    --color-difficulty-intermediate-bg: #eff6ff;
+    --color-difficulty-advanced: #8b5cf6;
+    --color-difficulty-advanced-bg: #f5f3ff;
+
+    /* 節點進度狀態色（SPEC §6.2） */
+    --color-status-todo: #94a3b8;
+    --color-status-learning: #f59e0b;
+    --color-status-done: #10b981;
+  }
+
+  .dark {
+    --color-difficulty-beginner: #34d399;
+    --color-difficulty-beginner-bg: #064e3b;
+    --color-difficulty-intermediate: #60a5fa;
+    --color-difficulty-intermediate-bg: #1e3a8a;
+    --color-difficulty-advanced: #a78bfa;
+    --color-difficulty-advanced-bg: #4c1d95;
+
+    --color-status-todo: #64748b;
+    --color-status-learning: #fbbf24;
+    --color-status-done: #34d399;
   }
 
   body {

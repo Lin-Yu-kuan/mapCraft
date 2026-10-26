@@ -1,0 +1,57 @@
+{
+  "common": {
+    "appName": "MapCraft",
+    "appSubtitle": "Learning Map Studio",
+    "tagline": "AI drafts the map. You craft the learning.",
+    "byokBadge": "Client-Only · Zero-Backend · BYOK",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "confirm": "Confirm",
+    "close": "Close",
+    "delete": "Delete",
+    "export": "Export"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "settings": "Settings",
+    "newCraft": "Craft New Map"
+  },
+  "topbar": {
+    "untitledMap": "Untitled Map",
+    "progressLabel": "Completed {{done}}/{{total}} ({{percent}}%)",
+    "settingsAria": "Open BYOK and Provider Settings",
+    "libraryAria": "Return to Library",
+    "themeToggleAria": "Toggle dark mode"
+  },
+  "home": {
+    "heroTitle": "Turn any topic into an actionable learning map",
+    "heroSubtitle": "Enter a subject or skill you wish to master. AI structures your step-by-step roadmap with checkpoints and milestones.",
+    "topicInputPlaceholder": "e.g., Spring Boot Architecture, Zero Trust Security, Rust Ownership...",
+    "startCraft": "Craft Map",
+    "sampleTopicsTitle": "Or start with these recommended topics:",
+    "sampleTopics": [
+      "Spring Boot Architecture",
+      "Zero Trust Security",
+      "Rust Ownership & Lifetimes",
+      "Distributed Consensus Algorithms"
+    ]
+  },
+  "settings": {
+    "title": "Settings & LLM Providers",
+    "subtitle": "Bring Your Own Key (BYOK). All credentials remain on your device and are never sent to third-party servers.",
+    "providerLabel": "LLM Provider",
+    "apiKeyLabel": "API Key",
+    "modelLabel": "Model",
+    "testConnection": "Test Connection",
+    "saveSettings": "Save Settings"
+  },
+  "errors": {
+    "notFoundTitle": "Page Not Found",
+    "notFoundDesc": "The page you are looking for does not exist or has been moved.",
+    "backToHome": "Back to Home"
+  }
+}

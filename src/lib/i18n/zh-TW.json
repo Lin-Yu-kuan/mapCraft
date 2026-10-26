@@ -1,0 +1,57 @@
+{
+  "common": {
+    "appName": "MapCraft",
+    "appSubtitle": "地圖工坊",
+    "tagline": "AI drafts the map. You craft the learning.（AI 起稿，你來完成。）",
+    "byokBadge": "純前端 · 零後端 · BYOK 自備金鑰",
+    "loading": "載入中...",
+    "error": "發生錯誤",
+    "retry": "重試",
+    "cancel": "取消",
+    "save": "儲存",
+    "confirm": "確認",
+    "close": "關閉",
+    "delete": "刪除",
+    "export": "匯出"
+  },
+  "nav": {
+    "home": "首頁",
+    "library": "地圖庫",
+    "settings": "設定",
+    "newCraft": "建立新地圖"
+  },
+  "topbar": {
+    "untitledMap": "未命名地圖",
+    "progressLabel": "已完成 {{done}}/{{total}}（{{percent}}%）",
+    "settingsAria": "開啟 BYOK 與供應商設定",
+    "libraryAria": "返回地圖庫",
+    "themeToggleAria": "切換深淺色外觀"
+  },
+  "home": {
+    "heroTitle": "把任何主題，變成一張走得完的學習地圖",
+    "heroSubtitle": "輸入你想掌握的領域或技能，AI 為你規劃結構化學習路徑，逐點深入、隨時驗證進度。",
+    "topicInputPlaceholder": "例如：Spring Boot 內部系統開發、零信任安全架構、Rust 所有權...",
+    "startCraft": "開始規劃地圖",
+    "sampleTopicsTitle": "或者從這些熱門主題開始探索：",
+    "sampleTopics": [
+      "Spring Boot 內部系統開發",
+      "零信任安全架構",
+      "Rust 所有權與生命週期",
+      "分散式系統共識演算法"
+    ]
+  },
+  "settings": {
+    "title": "設定與供應商連線",
+    "subtitle": "自備 LLM API 金鑰（BYOK），所有憑證僅儲存於本機瀏覽器中，絕不上傳第三方伺服器。",
+    "providerLabel": "LLM 供應商",
+    "apiKeyLabel": "API 金鑰",
+    "modelLabel": "模型名稱",
+    "testConnection": "測試連線",
+    "saveSettings": "儲存設定"
+  },
+  "errors": {
+    "notFoundTitle": "找不到頁面",
+    "notFoundDesc": "您所尋找的頁面不存在或已被移除。",
+    "backToHome": "返回首頁"
+  }
+}
