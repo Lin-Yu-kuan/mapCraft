@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2 } from 'lucide-react';
+import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus } from '@/domain/types';
 import { countLearningNodes } from '@/domain/tree';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
+import { LessonDrawer } from '@/features/lesson/LessonDrawer';
 import { MapCanvas } from './MapCanvas';
 
 interface OutletContextType {
@@ -22,7 +23,12 @@ export function MapPage() {
   const [progressList, setProgressList] = useState<NodeProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 選中節點（開啟教學抽屜）
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // 100% 完成低調慶祝狀態
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // 1. 載入地圖與進度
   useEffect(() => {
@@ -95,8 +101,57 @@ export function MapPage() {
     }
   }, [map, percent, setMapInfo]);
 
+  // 5. 節點狀態機切換（todo ↔ learning ↔ done）
+  const handleUpdateStatus = useCallback(
+    async (nodeId: string, nextStatus: NodeStatus) => {
+      if (!map) return;
+
+      const now = Date.now();
+      const existing = progressList.find((p) => p.nodeId === nodeId);
+
+      const updatedItem: NodeProgress = {
+        mapId: map.id,
+        nodeId,
+        status: nextStatus,
+        attempts: existing?.attempts || 0,
+        correct: existing?.correct || 0,
+        updatedAt: now,
+      };
+
+      const nextList = existing
+        ? progressList.map((p) => (p.nodeId === nodeId ? updatedItem : p))
+        : [...progressList, updatedItem];
+
+      setProgressList(nextList);
+      await progressRepo.save(updatedItem);
+
+      // 低調慶祝檢驗：若更新後全數完成且原本未慶祝
+      const total = countLearningNodes(map.root);
+      const doneTotal = nextList.filter((p) => p.status === 'done').length;
+      if (doneTotal === total && total > 0) {
+        setShowCelebration(true);
+      }
+    },
+    [map, progressList]
+  );
+
   const handleSelectNode = useCallback((nodeId: string) => {
     setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
+    setSelectedNodeId(null);
+  }, []);
+
+  // 鍵盤 Esc 關閉抽屜
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedNodeId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // 狀態 1：載入中（Loading）
@@ -167,7 +222,7 @@ export function MapPage() {
     );
   }
 
-  // 狀態 4：正常成功渲染畫布（Success）
+  // 狀態 4：正常成功渲染畫布與抽屜（Success）
   return (
     <div className="relative flex flex-1 flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden">
       {/* 畫布本體 */}
@@ -180,7 +235,7 @@ export function MapPage() {
         />
       </div>
 
-      {/* 底部浮動資訊列（小巧提示） */}
+      {/* 底部浮動資訊列 */}
       <div className="absolute bottom-4 left-4 z-10 hidden sm:flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-300">
         <span className="font-medium">
           {t('topbar.progressLabel', {
@@ -190,8 +245,37 @@ export function MapPage() {
           })}
         </span>
         <span className="text-slate-300 dark:text-slate-700">|</span>
-        <span className="text-[11px] text-slate-400">點擊節點展開/收合或查看教學</span>
+        <span className="text-[11px] text-slate-400">點擊節點開啟微教學抽屜</span>
       </div>
+
+      {/* 低調慶祝橫條（全數完成時顯示） */}
+      {showCelebration && (
+        <div
+          role="status"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 rounded-full border border-emerald-300 bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg animate-bounce"
+        >
+          <PartyPopper className="h-4 w-4" />
+          <span>恭喜！你已完成這張地圖的所有知識點！</span>
+          <button
+            type="button"
+            onClick={() => setShowCelebration(false)}
+            className="ml-1 text-emerald-100 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* 節點微教學抽屜（FR-04） */}
+      {selectedNodeId && (
+        <LessonDrawer
+          map={map}
+          nodeId={selectedNodeId}
+          status={progressMap[selectedNodeId] || 'todo'}
+          onClose={handleCloseDrawer}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      )}
     </div>
   );
 }

@@ -54,6 +54,27 @@
     "cancelTitleAria": "取消修改",
     "deleteMapAria": "刪除地圖"
   },
+  "lesson": {
+    "drawerTitle": "節點教學",
+    "conceptTitle": "這是什麼",
+    "whyTitle": "為什麼重要 / 解決什麼問題",
+    "exampleTitle": "實戰範例",
+    "pitfallsTitle": "常見誤解與盲點",
+    "keyPointsTitle": "重點回顧",
+    "quizTitle": "隨堂測驗",
+    "quizCorrect": "🎉 答對了！",
+    "quizIncorrect": "💡 再思考一下：",
+    "markAsLearning": "標記為學習中",
+    "markAsDone": "標記為已完成",
+    "markAsTodo": "重設為未開始",
+    "regenerate": "重新生成",
+    "copyMarkdown": "複製筆記",
+    "copied": "已複製！",
+    "generatingTitle": "正在生成教材...",
+    "generatingDesc": "AI 導師正依據前置路徑撰寫白話解釋、實例與隨堂測驗，請稍候...",
+    "stopGenerating": "停止生成",
+    "aiDisclaimer": "AI 生成 · {{model}} · {{timestamp}} · 請自行查證"
+  },
   "settings": {
     "title": "設定與供應商連線",
     "subtitle": "自備 LLM API 金鑰（BYOK），所有憑證僅儲存於本機瀏覽器中，絕不上傳第三方伺服器。",
