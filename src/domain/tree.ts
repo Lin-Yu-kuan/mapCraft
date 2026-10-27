@@ -86,6 +86,46 @@ export function getNodePath(root: MapNode, nodeId: string): MapNode[] {
 }
 
 /**
+ * 取得節點的直接父節點（若為根節點或查無則回傳 null）
+ */
+export function getNodeParent(root: MapNode, nodeId: string): MapNode | null {
+  const path = getNodePath(root, nodeId);
+  if (path.length <= 1) return null;
+  return path[path.length - 2] ?? null;
+}
+
+/**
+ * 取得節點的同層兄弟節點資訊（含前一個順位、後一個順位與所有同層兄弟）
+ */
+export function getNodeSiblings(
+  root: MapNode,
+  nodeId: string
+): {
+  parent: MapNode | null;
+  prevSibling: MapNode | null;
+  nextSibling: MapNode | null;
+  siblings: MapNode[];
+} {
+  const parent = getNodeParent(root, nodeId);
+  if (!parent || !parent.children) {
+    return { parent: null, prevSibling: null, nextSibling: null, siblings: [] };
+  }
+
+  const siblings = parent.children;
+  const index = siblings.findIndex((s) => s.id === nodeId);
+  if (index === -1) {
+    return { parent, prevSibling: null, nextSibling: null, siblings };
+  }
+
+  return {
+    parent,
+    prevSibling: index > 0 ? siblings[index - 1] ?? null : null,
+    nextSibling: index < siblings.length - 1 ? siblings[index + 1] ?? null : null,
+    siblings: siblings.filter((s) => s.id !== nodeId),
+  };
+}
+
+/**
  * 同層節點依據 label 去重（保留第一筆）
  */
 export function dedupeNodes(nodes: MapNode[]): MapNode[] {
@@ -246,3 +286,44 @@ export function createMapFromResponse(
     updatedAt: now,
   };
 }
+
+/**
+ * 將一組新子節點掛載至指定父節點底下，並重新分配全樹唯一階層 ID
+ */
+export function addChildNodes(
+  root: MapNode,
+  parentId: string,
+  newChildren: (Omit<MapNode, 'id'> & { id?: string })[]
+): MapNode {
+  function cloneAndAdd(node: MapNode): MapNode {
+    if (node.id === parentId) {
+      const existingChildren = node.children || [];
+      const formattedNewChildren: MapNode[] = newChildren.map((c, i) => ({
+        ...c,
+        id: c.id || `temp_${Date.now()}_${i}`,
+      }));
+      return {
+        ...node,
+        children: [...existingChildren, ...formattedNewChildren],
+      };
+    }
+
+    if (!node.children || node.children.length === 0) {
+      return { ...node };
+    }
+
+    return {
+      ...node,
+      children: node.children.map(cloneAndAdd),
+    };
+  }
+
+  const updatedTree = cloneAndAdd(root);
+
+  if (updatedTree.children) {
+    updatedTree.children = reassignIds(updatedTree.children);
+  }
+
+  return updatedTree;
+}
+

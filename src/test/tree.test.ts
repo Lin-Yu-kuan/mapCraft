@@ -10,6 +10,9 @@ import {
   getNodePath,
   countLearningNodes,
   createMapFromResponse,
+  getNodeParent,
+  getNodeSiblings,
+  addChildNodes,
 } from '@/domain/tree';
 
 describe('domain/tree', () => {
@@ -283,6 +286,124 @@ describe('domain/tree', () => {
       expect(map.providerId).toBe('openai');
       expect(map.modelId).toBe('gpt-4o-mini');
       expect(map.createdAt).toBeGreaterThan(0);
+    });
+  });
+
+  describe('getNodeParent & getNodeSiblings', () => {
+    const testRoot: MapNode = {
+      id: '0',
+      label: 'Root',
+      summary: 'Root summary',
+      difficulty: 'beginner',
+      children: [
+        {
+          id: '1',
+          label: 'Child 1',
+          summary: 'Summary 1',
+          difficulty: 'beginner',
+          children: [
+            {
+              id: '1.1',
+              label: 'Grandchild 1.1',
+              summary: 'Summary 1.1',
+              difficulty: 'intermediate',
+            },
+            {
+              id: '1.2',
+              label: 'Grandchild 1.2',
+              summary: 'Summary 1.2',
+              difficulty: 'intermediate',
+            },
+          ],
+        },
+        {
+          id: '2',
+          label: 'Child 2',
+          summary: 'Summary 2',
+          difficulty: 'advanced',
+        },
+      ],
+    };
+
+    it('應正確找出節點的直接父節點', () => {
+      const parentOf1 = getNodeParent(testRoot, '1');
+      expect(parentOf1?.id).toBe('0');
+
+      const parentOf11 = getNodeParent(testRoot, '1.1');
+      expect(parentOf11?.id).toBe('1');
+
+      const parentOfRoot = getNodeParent(testRoot, '0');
+      expect(parentOfRoot).toBeNull();
+    });
+
+    it('應正確找出節點的同層兄弟節點、前順位與後順位', () => {
+      const siblings11 = getNodeSiblings(testRoot, '1.1');
+      expect(siblings11.prevSibling).toBeNull();
+      expect(siblings11.nextSibling?.id).toBe('1.2');
+      expect(siblings11.siblings).toHaveLength(1);
+      expect(siblings11.siblings[0]?.id).toBe('1.2');
+
+      const siblings12 = getNodeSiblings(testRoot, '1.2');
+      expect(siblings12.prevSibling?.id).toBe('1.1');
+      expect(siblings12.nextSibling).toBeNull();
+
+      const siblingsRoot = getNodeSiblings(testRoot, '0');
+      expect(siblingsRoot.parent).toBeNull();
+      expect(siblingsRoot.siblings).toHaveLength(0);
+    });
+  });
+
+  describe('addChildNodes', () => {
+    it('應能將新子節點正確掛載到指定節點底下並重新分配階層 ID', () => {
+      const root: MapNode = {
+        id: '0',
+        label: '主題',
+        summary: '摘要',
+        difficulty: 'beginner',
+        children: [
+          {
+            id: '1',
+            label: '單元 1',
+            summary: '單元 1 摘要',
+            difficulty: 'beginner',
+            children: [
+              { id: '1.1', label: '子單元 1.1', summary: '摘要', difficulty: 'beginner' },
+            ],
+          },
+        ],
+      };
+
+      const newRoot = addChildNodes(root, '1', [
+        { label: '新子單元 A', summary: '新摘要 A', difficulty: 'intermediate' },
+        { label: '新子單元 B', summary: '新摘要 B', difficulty: 'advanced' },
+      ]);
+
+      const node1 = findNode(newRoot, '1');
+      expect(node1?.children).toHaveLength(3);
+      expect(node1?.children?.[1]?.id).toBe('1.2');
+      expect(node1?.children?.[1]?.label).toBe('新子單元 A');
+      expect(node1?.children?.[2]?.id).toBe('1.3');
+      expect(node1?.children?.[2]?.label).toBe('新子單元 B');
+    });
+
+    it('若掛載至根節點 0，應新增頂層子單元', () => {
+      const root: MapNode = {
+        id: '0',
+        label: '主題',
+        summary: '摘要',
+        difficulty: 'beginner',
+        children: [
+          { id: '1', label: '單元 1', summary: '摘要', difficulty: 'beginner' },
+        ],
+      };
+
+      const newRoot = addChildNodes(root, '0', [
+        { label: '單元 2', summary: '摘要 2', difficulty: 'intermediate' },
+      ]);
+
+      expect(newRoot.children).toHaveLength(2);
+      expect(newRoot.children?.[1]?.id).toBe('2');
+      expect(newRoot.children?.[1]?.label).toBe('單元 2');
     });
   });
 });

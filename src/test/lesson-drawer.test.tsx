@@ -115,7 +115,7 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
     );
   }
 
-  it('首次點選節點時呼叫 LLM API，成功渲染六大分區內容', async () => {
+  it('首次點選節點時顯示生成按鈕，點擊後呼叫 LLM API 並成功渲染六大分區內容', async () => {
     let fetchCalled = false;
     globalThis.fetch = vi.fn().mockImplementation(async () => {
       fetchCalled = true;
@@ -135,6 +135,17 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
     // 驗證標題與所在路徑（只帶路徑上下文）
     expect(screen.getByText('Dockerfile 實作')).toBeInTheDocument();
     expect(screen.getByText('Docker > Dockerfile 實作')).toBeInTheDocument();
+
+    // 驗證出現手動生成引導與按鈕
+    await waitFor(() => {
+      expect(screen.getByText('✨ 生成學習筆記')).toBeInTheDocument();
+    });
+
+    // 點擊手動生成按鈕
+    const generateBtn = screen.getByText('✨ 生成學習筆記');
+    await act(async () => {
+      fireEvent.click(generateBtn);
+    });
 
     // 驗證六大分區
     await waitFor(() => {

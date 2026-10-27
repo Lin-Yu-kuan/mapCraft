@@ -1,14 +1,16 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { CheckCircle2, Circle, Clock, ChevronRight, ChevronDown } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, ChevronRight, ChevronDown, Plus, Lightbulb } from 'lucide-react';
 import type { LayoutNodeData } from '@/domain/layout';
 import type { NodeStatus } from '@/domain/types';
 
 export interface NodeCardCustomData extends LayoutNodeData {
   status?: NodeStatus;
   selected?: boolean;
+  orderMode?: boolean;
   onToggleCollapse?: (nodeId: string) => void;
   onSelectNode?: (nodeId: string) => void;
+  onAddChild?: (nodeId: string) => void;
   [key: string]: unknown;
 }
 
@@ -30,6 +32,10 @@ const DIFFICULTY_CONFIG = {
 };
 
 export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode>) {
+  if (!data || !data.node) {
+    return null;
+  }
+
   const {
     node,
     isRoot,
@@ -38,11 +44,14 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
     isCollapsed,
     status = 'todo',
     selected = false,
+    orderMode = true,
     onToggleCollapse,
     onSelectNode,
+    onAddChild,
   } = data;
 
-  const diffConfig = DIFFICULTY_CONFIG[node.difficulty] || DIFFICULTY_CONFIG.beginner;
+  const difficulty = node.difficulty || 'beginner';
+  const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.beginner;
 
   const handleCardClick = () => {
     onSelectNode?.(node.id);
@@ -72,6 +81,20 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
             : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700'
       }`}
     >
+      {/* 快捷新增分支按鈕（+） */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddChild?.(node.id);
+        }}
+        title="為此節點新增分支"
+        aria-label="為此節點新增分支"
+        className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 shadow-sm transition-all hover:scale-110 hover:bg-emerald-50 opacity-0 group-hover:opacity-100 focus:opacity-100 dark:border-emerald-600 dark:bg-slate-900 dark:text-emerald-400 dark:hover:bg-slate-800"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+
       {/* React Flow 左側接點（根節點無輸入） */}
       {!isRoot && (
         <Handle
@@ -82,10 +105,21 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
       )}
 
       {/* 頂部：標題與狀態指示 */}
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="line-clamp-1 font-semibold text-xs sm:text-sm text-slate-900 dark:text-white" title={node.label}>
-          {node.label}
-        </h4>
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 flex items-center gap-1.5">
+          {/* 順序模式序號徽章 */}
+          {orderMode && !isRoot && (
+            <span className="shrink-0 rounded bg-slate-100 px-1 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              #{node.id}
+            </span>
+          )}
+          <h4
+            className="line-clamp-1 font-semibold text-xs sm:text-sm text-slate-900 dark:text-white"
+            title={node.label}
+          >
+            {node.label}
+          </h4>
+        </div>
 
         {/* 學習狀態指示 */}
         {!isRoot && (
@@ -106,13 +140,21 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
         {node.summary}
       </p>
 
-      {/* 底部：難度標籤與收合切換按鈕 */}
+      {/* 底部：難度標籤、模式指示與收合切換按鈕 */}
       <div className="flex items-center justify-between pt-1">
-        <span
-          className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${diffConfig.badge}`}
-        >
-          {diffConfig.label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${diffConfig.badge}`}
+          >
+            {diffConfig.label}
+          </span>
+          {node.mode === 'brainstorm' && (
+            <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-200 bg-amber-50 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+              <Lightbulb className="h-2.5 w-2.5" />
+              <span>發想</span>
+            </span>
+          )}
+        </div>
 
         {/* 展開/收合子樹切換按鈕 */}
         {hasChildren && (

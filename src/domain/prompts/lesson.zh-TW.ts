@@ -57,18 +57,26 @@ export interface LessonPromptParams {
   level: string;
   nodeLabel: string;
   nodeSummary: string;
+  goal?: string;
+  siblingLabels?: string[];
 }
 
 export function buildLessonPrompt(params: LessonPromptParams): { system: string; user: string } {
   const system = `你是使用繁體中文（台灣用語）的專業導師。你的任務是讓一個非專家在 3 分鐘內真正理解一個知識點。
 你只輸出 JSON。不得出現簡體字。專有名詞第一次出現時附上英文原文。`;
 
+  const goalText = params.goal ? `學習目標：${params.goal}\n` : '';
+  const siblingsText =
+    params.siblingLabels && params.siblingLabels.length > 0
+      ? `同層其他主題包含：${params.siblingLabels.join('、')}。（請專注於本節點，避免詳細解釋同層其他節點的範疇）\n`
+      : '';
+
   const user = `學習主題：${params.mapTitle}
-所在路徑：${params.pathLabels}
+${goalText}所在路徑：${params.pathLabels}
 學習者程度：${params.level}
 知識點：${params.nodeLabel}
 知識點摘要：${params.nodeSummary}
-
+${siblingsText}
 請產出以下欄位（皆為繁體中文）：
 - concept：150–400 字白話解釋。先用一句話定義，再說明運作原理，最後說明「什麼時候會用到」。
 - why：1–3 句，說明它解決了什麼問題、不學它會遇到什麼麻煩。

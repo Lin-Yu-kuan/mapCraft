@@ -1,10 +1,21 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper, Download, FileText, Network } from 'lucide-react';
+import {
+  MapPin,
+  AlertCircle,
+  Compass,
+  ArrowLeft,
+  Loader2,
+  PartyPopper,
+  Download,
+  FileText,
+  Network,
+  ListOrdered,
+} from 'lucide-react';
 
-import type { LearningMap, NodeProgress, NodeStatus } from '@/domain/types';
-import { countLearningNodes } from '@/domain/tree';
+import type { LearningMap, NodeProgress, NodeStatus, MapNode } from '@/domain/types';
+import { countLearningNodes, findNode, addChildNodes } from '@/domain/tree';
 import { generateMapMarkdown } from '@/domain/export/markdown';
 import { generateMapOpml } from '@/domain/export/opml';
 import { mapsRepo } from '@/lib/db/repos/maps';
@@ -13,6 +24,7 @@ import { lessonsRepo } from '@/lib/db/repos/lessons';
 import { createBackupData, downloadBackupFile, downloadBlob } from '@/lib/storage/backup';
 import { LessonDrawer } from '@/features/lesson/LessonDrawer';
 import { MapCanvas } from './MapCanvas';
+import { AddSubtreeModal } from './AddSubtreeModal';
 
 interface OutletContextType {
   setMapInfo?: (info: { title: string; progressPercent: number; isVisible: boolean } | null) => void;
@@ -33,6 +45,25 @@ export function MapPage() {
 
   // 100% 完成低調慶祝狀態
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // OPML 匯出指引通知
+  const [opmlNotice, setOpmlNotice] = useState(false);
+
+  // 順序學習模式開關（預設開啟）
+  const [orderMode, setOrderMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mapcraft.orderMode');
+        if (saved !== null) return saved === 'true';
+      } catch {
+        // ignore
+      }
+    }
+    return true;
+  });
+
+  // 目標新增分支之節點
+  const [subtreeTargetNode, setSubtreeTargetNode] = useState<MapNode | null>(null);
 
   // 1. 載入地圖與進度
   useEffect(() => {
@@ -147,6 +178,40 @@ export function MapPage() {
     setSelectedNodeId(null);
   }, []);
 
+  // 開啟新增子分支彈窗
+  const handleOpenAddChild = useCallback(
+    (nodeId: string) => {
+      if (!map) return;
+      const target = findNode(map.root, nodeId);
+      if (target) {
+        setSubtreeTargetNode(target);
+      }
+    },
+    [map]
+  );
+
+  // 確認新增子分支並持久化
+  const handleSubtreeAdded = useCallback(
+    async (newChildren: (Omit<MapNode, 'id'> & { id?: string })[]) => {
+      if (!map || !subtreeTargetNode) return;
+
+      const newRoot = addChildNodes(map.root, subtreeTargetNode.id, newChildren);
+      const updatedMap: LearningMap = {
+        ...map,
+        root: newRoot,
+        updatedAt: Date.now(),
+      };
+
+      try {
+        await mapsRepo.save(updatedMap);
+        setMap(updatedMap);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [map, subtreeTargetNode]
+  );
+
   // 鍵盤 Esc 關閉抽屜
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -258,21 +323,38 @@ export function MapPage() {
       const opmlContent = generateMapOpml(map, progressList);
       const safeTitle = map.title.replace(/[\\/:*?"<>|]/g, '_');
       downloadBlob(`${safeTitle}.opml`, opmlContent, 'text/xml;charset=utf-8');
+      setOpmlNotice(true);
+      setTimeout(() => setOpmlNotice(false), 6000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     }
   };
 
+  // 切換順序模式
+  const handleToggleOrderMode = () => {
+    setOrderMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('mapcraft.orderMode', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   // 狀態 4：正常成功渲染畫布與抽屜（Success）
   return (
-    <div className="relative flex flex-1 flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden">
+    <div className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
       {/* 畫布本體 */}
-      <div className="relative flex-1 w-full h-full">
+      <div className="absolute inset-0 w-full h-full">
         <MapCanvas
           map={map}
           progressMap={progressMap}
           selectedNodeId={selectedNodeId}
+          orderMode={orderMode}
           onSelectNode={handleSelectNode}
+          onAddChild={handleOpenAddChild}
         />
       </div>
 
@@ -289,6 +371,21 @@ export function MapPage() {
           <span className="text-slate-300 dark:text-slate-700">|</span>
           <span className="text-[11px] text-slate-400">{t('map.clickNodeHint')}</span>
         </div>
+
+        {/* 順序模式切換按鈕 */}
+        <button
+          type="button"
+          onClick={handleToggleOrderMode}
+          title={orderMode ? t('map.orderModeOn') : t('map.orderModeOff')}
+          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-xs backdrop-blur-md transition-all ${
+            orderMode
+              ? 'border-emerald-400 bg-emerald-50/90 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300'
+              : 'border-slate-200/90 bg-white/90 text-slate-600 hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-400'
+          }`}
+        >
+          <ListOrdered className="h-3.5 w-3.5 text-emerald-600" />
+          <span>{t('map.orderMode')}</span>
+        </button>
 
         {/* 匯出操作按鈕 */}
         <div className="flex items-center gap-1.5">
@@ -345,6 +442,23 @@ export function MapPage() {
         </div>
       )}
 
+      {/* OPML 匯出指引通知 */}
+      {opmlNotice && (
+        <div
+          role="status"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-xl border border-sky-300 bg-sky-600 px-4 py-2 text-xs font-medium text-white shadow-lg"
+        >
+          <span>{t('map.opmlNoticeDesc')}</span>
+          <button
+            type="button"
+            onClick={() => setOpmlNotice(false)}
+            className="ml-2 text-sky-200 hover:text-white font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 節點微教學抽屜（FR-04） */}
       {selectedNodeId && (
         <LessonDrawer
@@ -353,6 +467,18 @@ export function MapPage() {
           status={progressMap[selectedNodeId] || 'todo'}
           onClose={handleCloseDrawer}
           onUpdateStatus={handleUpdateStatus}
+          onSelectNode={handleSelectNode}
+        />
+      )}
+
+      {/* 新增子分支彈窗（AI 生成 vs 手動輸入） */}
+      {subtreeTargetNode && (
+        <AddSubtreeModal
+          map={map}
+          targetNode={subtreeTargetNode}
+          isOpen={Boolean(subtreeTargetNode)}
+          onClose={() => setSubtreeTargetNode(null)}
+          onSubtreeAdded={handleSubtreeAdded}
         />
       )}
     </div>

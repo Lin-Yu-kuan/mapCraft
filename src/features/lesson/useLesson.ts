@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { z } from 'zod';
-import type { LearningMap, Lesson, LessonContent, MapNode } from '@/domain/types';
-import { LessonContentSchema } from '@/domain/schemas';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { LearningMap, Lesson, LessonContent, MapNode, NodeMode, BrainstormContent } from '@/domain/types';
+import { LessonContentSchema, BrainstormContentSchema } from '@/domain/schemas';
 import {
   buildLessonRequest,
+  buildBrainstormRequest,
   buildRepairRequest,
   LESSON_PROMPT_VERSION,
   LESSON_JSON_SCHEMA,
+  BRAINSTORM_PROMPT_VERSION,
+  BRAINSTORM_JSON_SCHEMA,
 } from '@/domain/prompts';
-import { findNode, getNodePath } from '@/domain/tree';
+import { findNode, getNodePath, getNodeSiblings } from '@/domain/tree';
 import { lessonsRepo } from '@/lib/db/repos/lessons';
 import { settingsRepo } from '@/lib/db/repos/settings';
 import { getStoredApiKey } from '@/lib/storage/settings';
@@ -25,7 +27,8 @@ export interface UseLessonResult {
   isLoading: boolean;
   isGenerating: boolean;
   error: NormalizedError | null;
-  fetchLesson: (forceRegenerate?: boolean) => Promise<Lesson | null>;
+  fetchLesson: (forceRegenerate?: boolean, mode?: NodeMode) => Promise<Lesson | null>;
+  generateLesson: (mode?: NodeMode) => Promise<Lesson | null>;
   cancelGeneration: () => void;
   clearError: () => void;
 }
@@ -38,14 +41,14 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 取得目標節點與祖先路徑標籤（只帶路徑上下文規則，省 Token）
-  const currentNode = map && nodeId ? findNode(map.root, nodeId) : null;
-  const pathLabels =
-    map && nodeId
-      ? getNodePath(map.root, nodeId)
-          .map((n) => n.label)
-          .join(' > ')
-      : '';
+  // 取得目標節點與祖先路徑標籤
+  const currentNode = useMemo(() => (map && nodeId ? findNode(map.root, nodeId) : null), [map, nodeId]);
+  const pathLabels = useMemo(() => {
+    if (!map || !nodeId) return '';
+    return getNodePath(map.root, nodeId)
+      .map((n) => n.label)
+      .join(' > ');
+  }, [map, nodeId]);
 
   const cancelGeneration = useCallback(() => {
     if (abortControllerRef.current) {
@@ -60,30 +63,15 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
     setError(null);
   }, []);
 
-  const fetchLesson = useCallback(
-    async (forceRegenerate = false): Promise<Lesson | null> => {
+  // 執行 AI 生成內容請求（支援學習模式與腦力激盪模式）
+  const executeGeneration = useCallback(
+    async (targetMode: NodeMode = currentNode?.mode || 'learning'): Promise<Lesson | null> => {
       if (!map || !nodeId || !currentNode) return null;
 
       setError(null);
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      // 1. 檢查快取（除非使用者強制重新生成，否則命中快取 0 成本直出，AC-04）
-      if (!forceRegenerate) {
-        setIsLoading(true);
-        try {
-          const cached = await lessonsRepo.get(map.id, nodeId);
-          if (cached && cached.promptVersion === LESSON_PROMPT_VERSION) {
-            setLesson(cached);
-            setIsLoading(false);
-            return cached;
-          }
-        } catch {
-          // 忽略讀取快取失敗，直接進入生成流程
-        }
-      }
-
-      // 2. 快取未命中或強制重新生成：呼叫 LLM
       setIsGenerating(true);
       setIsLoading(true);
 
@@ -105,7 +93,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           return null;
         }
 
-        // 教材撰寫模型（偏好深度與教學品質，優先使用 lastLessonModelId）
+        // 教材或發想撰寫模型
         const defaultLessonModel =
           meta?.recommendedModels.find((m) => m.role === 'lesson' || m.role === 'both')?.id ||
           meta?.recommendedModels[0]?.id ||
@@ -121,17 +109,22 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           apiKey
         );
 
-        const req = buildLessonRequest(
-          {
-            mapTitle: map.title,
-            pathLabels,
-            level: map.options.level,
-            nodeLabel: currentNode.label,
-            nodeSummary: currentNode.summary,
-          },
-          0.3,
-          controller.signal
-        );
+        const siblingLabels = getNodeSiblings(map.root, nodeId).siblings.map((s) => s.label);
+
+        const promptParams = {
+          mapTitle: map.title,
+          pathLabels,
+          level: map.options.level,
+          nodeLabel: currentNode.label,
+          nodeSummary: currentNode.summary,
+          goal: map.options.goal,
+          siblingLabels,
+        };
+
+        const req =
+          targetMode === 'brainstorm'
+            ? buildBrainstormRequest(promptParams, 0.7, controller.signal)
+            : buildLessonRequest(promptParams, 0.3, controller.signal);
 
         let rawText = '';
         try {
@@ -150,72 +143,118 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           return null;
         }
 
-        // 解析與驗證
-        let parsedRawContent: z.infer<typeof LessonContentSchema> | null = null;
-        try {
-          parsedRawContent = parseAndValidateJson<z.infer<typeof LessonContentSchema>>(
-            rawText,
-            LessonContentSchema
-          );
-        } catch (parseErr: unknown) {
-          // 自動修復重試 1 次
-          const firstErr = parseErr instanceof Error ? parseErr.message : String(parseErr);
+        let newLesson: Lesson;
+
+        if (targetMode === 'brainstorm') {
+          // 腦力激盪模式解析與修復
+          let validatedBrainstorm: BrainstormContent | null = null;
           try {
-            const repairReq = buildRepairRequest(
+            validatedBrainstorm = parseAndValidateJson<BrainstormContent>(
               rawText,
-              firstErr,
-              LESSON_JSON_SCHEMA,
-              controller.signal
+              BrainstormContentSchema
             );
-            const repairRes = await provider.generate(repairReq);
-            parsedRawContent = parseAndValidateJson<z.infer<typeof LessonContentSchema>>(
-              repairRes.text,
-              LessonContentSchema
-            );
-          } catch (repairErr: unknown) {
-            if (controller.signal.aborted) {
+          } catch (firstParseErr: unknown) {
+            const firstErrMessage =
+              firstParseErr instanceof Error ? firstParseErr.message : String(firstParseErr);
+
+            try {
+              const repairReq = buildRepairRequest(
+                rawText,
+                firstErrMessage,
+                BRAINSTORM_JSON_SCHEMA,
+                controller.signal
+              );
+              const repairedRes = await provider.generate(repairReq);
+              validatedBrainstorm = parseAndValidateJson<BrainstormContent>(
+                repairedRes.text,
+                BrainstormContentSchema
+              );
+            } catch (repairErr: unknown) {
+              if (controller.signal.aborted) {
+                setIsGenerating(false);
+                setIsLoading(false);
+                return null;
+              }
+              const normErr: NormalizedError = {
+                code: 'PARSE_ERROR',
+                providerId,
+                messageForUser: '模型回傳的發想結構有誤，自動修復重試仍無法解析。請重新嘗試。',
+                raw: repairErr instanceof Error ? repairErr.message : String(repairErr),
+              };
+              setError(normErr);
               setIsGenerating(false);
               setIsLoading(false);
               return null;
             }
-            const normErr: NormalizedError = {
-              code: 'PARSE_ERROR',
-              providerId,
-              messageForUser: '模型回傳的教材內容結構不符規範，已嘗試自動修復仍無法解析。',
-              raw: repairErr instanceof Error ? repairErr.message : String(repairErr),
-            };
-            setError(normErr);
-            setIsGenerating(false);
-            setIsLoading(false);
-            return null;
           }
-        }
 
-        const validatedContent: LessonContent = {
-          concept: parsedRawContent.concept,
-          why: parsedRawContent.why,
-          pitfalls: parsedRawContent.pitfalls,
-          keyPoints: parsedRawContent.keyPoints,
-          example: parsedRawContent.example
-            ? {
-                scenario: parsedRawContent.example.scenario,
-                explain: parsedRawContent.example.explain,
-                code: parsedRawContent.example.code ?? undefined,
-                language: parsedRawContent.example.language ?? undefined,
+          newLesson = {
+            mapId: map.id,
+            nodeId,
+            schemaVersion: 1,
+            modelId: modelToUse,
+            promptVersion: BRAINSTORM_PROMPT_VERSION,
+            mode: 'brainstorm',
+            content: {
+              concept: validatedBrainstorm.coreIdea,
+              why: validatedBrainstorm.useCases.join('\n'),
+              pitfalls: validatedBrainstorm.challenges,
+              keyPoints: validatedBrainstorm.nextSteps,
+            },
+            brainstormContent: validatedBrainstorm,
+            createdAt: Date.now(),
+          };
+        } else {
+          // 學習模式解析與修復
+          let validatedContent: LessonContent | null = null;
+          try {
+            validatedContent = parseAndValidateJson<LessonContent>(rawText, LessonContentSchema);
+          } catch (firstParseErr: unknown) {
+            const firstErrMessage =
+              firstParseErr instanceof Error ? firstParseErr.message : String(firstParseErr);
+
+            try {
+              const repairReq = buildRepairRequest(
+                rawText,
+                firstErrMessage,
+                LESSON_JSON_SCHEMA,
+                controller.signal
+              );
+              const repairedRes = await provider.generate(repairReq);
+              validatedContent = parseAndValidateJson<LessonContent>(
+                repairedRes.text,
+                LessonContentSchema
+              );
+            } catch (repairErr: unknown) {
+              if (controller.signal.aborted) {
+                setIsGenerating(false);
+                setIsLoading(false);
+                return null;
               }
-            : undefined,
-          quiz: parsedRawContent.quiz,
-        };
+              const normErr: NormalizedError = {
+                code: 'PARSE_ERROR',
+                providerId,
+                messageForUser: '模型回傳的教材結構有誤，自動修復重試仍無法解析。請重新嘗試。',
+                raw: repairErr instanceof Error ? repairErr.message : String(repairErr),
+              };
+              setError(normErr);
+              setIsGenerating(false);
+              setIsLoading(false);
+              return null;
+            }
+          }
 
-        const newLesson: Lesson = {
-          mapId: map.id,
-          nodeId,
-          schemaVersion: 1,
-          modelId: modelToUse,
-          promptVersion: LESSON_PROMPT_VERSION,
-          content: validatedContent,
-          createdAt: Date.now(),
-        };
+          newLesson = {
+            mapId: map.id,
+            nodeId,
+            schemaVersion: 1,
+            modelId: modelToUse,
+            promptVersion: LESSON_PROMPT_VERSION,
+            mode: 'learning',
+            content: validatedContent,
+            createdAt: Date.now(),
+          };
+        }
 
         // 存入 Dexie 快取
         await lessonsRepo.save(newLesson);
@@ -239,16 +278,82 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
     [map, nodeId, currentNode, pathLabels]
   );
 
-  // 當切換節點時，立即清理舊內容，並自動觸發讀取（符合 AC-04）
+  const fetchLesson = useCallback(
+    async (forceRegenerate = false, mode?: NodeMode): Promise<Lesson | null> => {
+      if (!map || !nodeId) return null;
+
+      if (!forceRegenerate) {
+        setIsLoading(true);
+        try {
+          const cached = await lessonsRepo.get(map.id, nodeId);
+          if (
+            cached &&
+            (cached.promptVersion === LESSON_PROMPT_VERSION ||
+              cached.promptVersion === BRAINSTORM_PROMPT_VERSION)
+          ) {
+            setLesson(cached);
+            setIsLoading(false);
+            return cached;
+          }
+        } catch {
+          // 忽略讀取快取錯誤
+        }
+        setIsLoading(false);
+      }
+
+      // 若強制重新生成，執行生成
+      return executeGeneration(mode);
+    },
+    [map, nodeId, executeGeneration]
+  );
+
+  const generateLesson = useCallback(
+    (mode?: NodeMode) => {
+      return executeGeneration(mode);
+    },
+    [executeGeneration]
+  );
+
+  // 切換節點時，僅自動讀取本機快取；若無快取則停留在未生成狀態，等待使用者手動觸發
   useEffect(() => {
     cancelGeneration();
     setLesson(null);
     setError(null);
 
-    if (map && nodeId) {
-      fetchLesson(false);
+    let isMounted = true;
+    async function checkCache() {
+      if (!map || !nodeId) return;
+      setIsLoading(true);
+      try {
+        const cached = await lessonsRepo.get(map.id, nodeId);
+        if (isMounted) {
+          if (
+            cached &&
+            (cached.promptVersion === LESSON_PROMPT_VERSION ||
+              cached.promptVersion === BRAINSTORM_PROMPT_VERSION)
+          ) {
+            setLesson(cached);
+          } else if (nodeId === '0') {
+            // 根節點自動生成導覽
+            executeGeneration('learning');
+          } else {
+            setLesson(null);
+          }
+        }
+      } catch {
+        if (isMounted) setLesson(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     }
-  }, [map, nodeId, cancelGeneration, fetchLesson]);
+
+    checkCache();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map?.id, nodeId]);
 
   return {
     lesson,
@@ -258,6 +363,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
     isGenerating,
     error,
     fetchLesson,
+    generateLesson,
     cancelGeneration,
     clearError,
   };

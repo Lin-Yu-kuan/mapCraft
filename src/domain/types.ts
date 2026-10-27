@@ -1,6 +1,15 @@
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 export type NodeStatus = 'todo' | 'learning' | 'done';
 export type Level = 'beginner' | 'some' | 'advanced';
+export type NodeMode = 'learning' | 'brainstorm';
+
+/** 腦力激盪模式固定框架（💡 核心創意／🎯 應用情境／⚠️ 潛在挑戰／🚀 下一步行動） */
+export interface BrainstormContent {
+  coreIdea: string; // 💡 核心創意
+  useCases: string[]; // 🎯 應用情境
+  challenges: string[]; // ⚠️ 潛在挑戰
+  nextSteps: string[]; // 🚀 下一步行動
+}
 
 /** AI 產出的原始節點（未含本地狀態） */
 export interface MapNode {
@@ -10,6 +19,7 @@ export interface MapNode {
   difficulty: Difficulty;
   estMinutes?: number; // 5–180
   children?: MapNode[]; // 深度 ≤ 5
+  mode?: NodeMode; // 學習模式或腦力激盪模式
 }
 
 export interface GenerationOptions {
@@ -52,8 +62,10 @@ export interface Lesson {
   nodeId: string;
   schemaVersion: 1;
   modelId: string;
-  promptVersion: string; // 例如 "lesson.zh-TW.v1"
+  promptVersion: string; // 例如 "lesson.zh-TW.v1" 或 "brainstorm.zh-TW.v1"
+  mode?: NodeMode;
   content: LessonContent;
+  brainstormContent?: BrainstormContent;
   createdAt: number;
   partial?: boolean; // 使用者中途停止
 }

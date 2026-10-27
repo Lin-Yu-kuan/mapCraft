@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   X,
@@ -16,9 +16,15 @@ import {
   Loader2,
   AlertCircle,
   FileText,
+  Sparkles,
+  ArrowRight,
+  Target,
+  Rocket,
 } from 'lucide-react';
 
-import type { LearningMap, NodeStatus } from '@/domain/types';
+import type { LearningMap, NodeStatus, NodeMode } from '@/domain/types';
+import { getNodeParent, getNodeSiblings } from '@/domain/tree';
+import { lessonsRepo } from '@/lib/db/repos/lessons';
 import { SafeMarkdown } from '@/shared/components/SafeMarkdown';
 import { useLesson } from './useLesson';
 
@@ -28,6 +34,7 @@ interface LessonDrawerProps {
   status?: NodeStatus;
   onClose: () => void;
   onUpdateStatus?: (nodeId: string, nextStatus: NodeStatus) => void;
+  onSelectNode?: (nodeId: string) => void;
 }
 
 export function LessonDrawer({
@@ -36,6 +43,7 @@ export function LessonDrawer({
   status = 'todo',
   onClose,
   onUpdateStatus,
+  onSelectNode,
 }: LessonDrawerProps) {
   const { t } = useTranslation();
   const {
@@ -46,6 +54,7 @@ export function LessonDrawer({
     isGenerating,
     error,
     fetchLesson,
+    generateLesson,
     cancelGeneration,
   } = useLesson(map, nodeId);
 
@@ -53,11 +62,98 @@ export function LessonDrawer({
   const [selectedQuizOption, setSelectedQuizOption] = useState<number | null>(null);
   const [hasCopiedNote, setHasCopiedNote] = useState(false);
 
+  // 軟性依賴提醒確認框
+  const [showPrereqWarning, setShowPrereqWarning] = useState(false);
+  const pendingGenerateRef = useRef<(() => void) | null>(null);
+
+  // 抽屜寬度可拖曳調整（預設 480px，範圍 380px ~ 900px）
+  const [drawerWidth, setDrawerWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mapcraft.drawer.width');
+        if (saved) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed) && parsed >= 380 && parsed <= 900) return parsed;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return 480;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      const clamped = Math.min(Math.max(newWidth, 380), Math.min(window.innerWidth * 0.85, 900));
+      setDrawerWidth(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      try {
+        localStorage.setItem('mapcraft.drawer.width', String(drawerWidth));
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, drawerWidth]);
+
   if (!nodeId || !currentNode) return null;
 
   // 匯出為 Markdown 筆記並複製
   const handleCopyNote = async () => {
     if (!lesson) return;
+
+    if (lesson.brainstormContent) {
+      const b = lesson.brainstormContent;
+      const mdLines = [
+        `# ${currentNode.label}（腦力激盪）`,
+        `> 所在路徑：${pathLabels}`,
+        `> 綱要：${currentNode.summary}`,
+        '',
+        `## 💡 核心創意`,
+        b.coreIdea,
+        '',
+        `## 🎯 應用情境`,
+        ...b.useCases.map((u) => `- ${u}`),
+        '',
+        `## ⚠️ 潛在挑戰`,
+        ...b.challenges.map((c) => `- ${c}`),
+        '',
+        `## 🚀 下一步行動`,
+        ...b.nextSteps.map((n) => `- ${n}`),
+        '',
+        `---`,
+        `*AI 生成 · ${lesson.modelId} · 請自行查證*`,
+      ];
+
+      try {
+        await navigator.clipboard.writeText(mdLines.join('\n'));
+        setHasCopiedNote(true);
+        setTimeout(() => setHasCopiedNote(false), 2000);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
     const { content } = lesson;
 
     const mdLines = [
@@ -98,7 +194,7 @@ export function LessonDrawer({
     }
 
     mdLines.push(`---`);
-    mdLines.push(`> AI 生成 · ${lesson.modelId} · ${new Date(lesson.createdAt).toLocaleString()} · 請自行查證`);
+    mdLines.push(`*AI 生成 · ${lesson.modelId} · 請自行查證*`);
 
     try {
       await navigator.clipboard.writeText(mdLines.join('\n'));
@@ -109,12 +205,82 @@ export function LessonDrawer({
     }
   };
 
+  // 點擊「生成內容」時，進行軟性前置依賴檢查
+  const handleTriggerGenerate = async (mode: NodeMode = 'learning') => {
+    // 檢查 1：父節點（若非根節點）是否已生成
+    const parent = getNodeParent(map.root, nodeId);
+    let hasUnfinishedPrereq = false;
+
+    if (parent && parent.id !== '0') {
+      const parentLesson = await lessonsRepo.get(map.id, parent.id);
+      if (!parentLesson) {
+        hasUnfinishedPrereq = true;
+      }
+    }
+
+    // 檢查 2：同層前一個順位節點是否已生成
+    if (!hasUnfinishedPrereq) {
+      const { prevSibling } = getNodeSiblings(map.root, nodeId);
+      if (prevSibling) {
+        const prevLesson = await lessonsRepo.get(map.id, prevSibling.id);
+        if (!prevLesson) {
+          hasUnfinishedPrereq = true;
+        }
+      }
+    }
+
+    if (hasUnfinishedPrereq) {
+      // 軟性提醒確認框
+      pendingGenerateRef.current = () => {
+        generateLesson(mode);
+      };
+      setShowPrereqWarning(true);
+    } else {
+      generateLesson(mode);
+    }
+  };
+
+  const handleConfirmPrereqContinue = () => {
+    setShowPrereqWarning(false);
+    if (pendingGenerateRef.current) {
+      pendingGenerateRef.current();
+      pendingGenerateRef.current = null;
+    }
+  };
+
+  const handleGoToPrereq = () => {
+    setShowPrereqWarning(false);
+    pendingGenerateRef.current = null;
+    // 優先前往未生成的父節點，其次為前兄弟節點
+    const parent = getNodeParent(map.root, nodeId);
+    if (parent && parent.id !== '0') {
+      onSelectNode?.(parent.id);
+      return;
+    }
+    const { prevSibling } = getNodeSiblings(map.root, nodeId);
+    if (prevSibling) {
+      onSelectNode?.(prevSibling.id);
+    }
+  };
+
   return (
     <aside
       role="complementary"
       aria-label={t('lesson.drawerTitle')}
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl transition-all duration-300 sm:w-[480px] dark:bg-slate-950 dark:border-l dark:border-slate-800"
+      style={{
+        width: typeof window !== 'undefined' && window.innerWidth >= 640 ? `${drawerWidth}px` : undefined,
+      }}
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl select-text dark:bg-slate-950 dark:border-l dark:border-slate-800"
     >
+      {/* 桌面端左側橫向拖曳邊界把手（Resize Handle） */}
+      <div
+        onMouseDown={startResizing}
+        title="按住向左/右拖曳調整面板大小"
+        className="hidden sm:block absolute left-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-emerald-500/40 active:bg-emerald-600 transition-colors z-20 group"
+      >
+        <div className="absolute top-1/2 left-0.5 -translate-y-1/2 h-8 w-1 rounded-full bg-slate-300 opacity-0 group-hover:opacity-100 dark:bg-slate-700" />
+      </div>
+
       {/* 頂部 Header */}
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5 dark:border-slate-800">
         <div className="min-w-0 pr-3">
@@ -136,7 +302,38 @@ export function LessonDrawer({
         </button>
       </div>
 
-      {/* 內容主滾動區 */}
+      {/* 軟性依賴提醒彈窗 */}
+      {showPrereqWarning && (
+        <div className="border-b border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/60">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="space-y-1.5 text-xs text-amber-900 dark:text-amber-200">
+              <h4 className="font-semibold">{t('map.prerequisiteWarningTitle')}</h4>
+              <p className="leading-relaxed text-[11px] text-amber-800 dark:text-amber-300">
+                {t('map.prerequisiteWarningDesc')}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleConfirmPrereqContinue}
+                  className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-500"
+                >
+                  {t('map.continueGenerate')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToPrereq}
+                  className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-200"
+                >
+                  {t('map.cancelGenerate')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 內容主滾動區（已解除 select-none，支援選取反白複製） */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
         {/* 載入中（生成中態） */}
         {isLoading && !lesson ? (
@@ -184,8 +381,122 @@ export function LessonDrawer({
               </div>
             </div>
           </div>
+        ) : !lesson ? (
+          /* 尚未生成內容態（手動按鈕觸發生成） */
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <Sparkles className="h-7 w-7" />
+            </div>
+            <div className="space-y-1.5 max-w-sm">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {t('lesson.notGeneratedTitle')}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {t('lesson.notGeneratedDesc')}
+              </p>
+              {currentNode.summary && (
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-xs text-slate-600 shadow-2xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                  <span className="font-semibold text-slate-900 dark:text-white block mb-1">🎯 本知識點綱要：</span>
+                  {currentNode.summary}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => handleTriggerGenerate('learning')}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-all active:scale-95 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>{t('lesson.generateLesson')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTriggerGenerate('brainstorm')}
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-900 shadow-xs hover:bg-amber-100 transition-all active:scale-95 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900/60"
+              >
+                <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span>{t('lesson.generateBrainstorm')}</span>
+              </button>
+            </div>
+          </div>
+        ) : lesson.brainstormContent ? (
+          /* 💡 腦力激盪四大分區渲染（Brainstorming Mode） */
+          <>
+            {/* 1. 核心創意 */}
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <Lightbulb className="h-4 w-4" />
+                <span>{t('lesson.brainstormCoreIdeas')}</span>
+              </div>
+              <div className="rounded-xl border border-amber-200/90 bg-amber-50/70 p-4 shadow-2xs dark:border-amber-900/60 dark:bg-amber-950/40">
+                <SafeMarkdown content={lesson.brainstormContent.coreIdea} />
+              </div>
+            </section>
+
+            {/* 2. 應用情境 */}
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <Target className="h-4 w-4" />
+                <span>{t('lesson.brainstormUseCases')}</span>
+              </div>
+              <div className="space-y-2">
+                {lesson.brainstormContent.useCases.map((useCase, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 shadow-2xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      {idx + 1}
+                    </span>
+                    <span className="pt-0.5 leading-relaxed">{useCase}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* 3. 潛在挑戰 */}
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="h-4 w-4" />
+                <span>{t('lesson.brainstormChallenges')}</span>
+              </div>
+              <div className="space-y-2">
+                {lesson.brainstormContent.challenges.map((challenge, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50/60 p-3 text-xs text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                  >
+                    <span className="text-rose-500 font-bold">•</span>
+                    <span className="leading-relaxed">{challenge}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* 4. 下一步行動 */}
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                <Rocket className="h-4 w-4" />
+                <span>{t('lesson.brainstormNextSteps')}</span>
+              </div>
+              <div className="space-y-2">
+                {lesson.brainstormContent.nextSteps.map((step, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-3 text-xs text-sky-950 shadow-2xs dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-sky-200"
+                  >
+                    <ArrowRight className="h-4 w-4 shrink-0 text-sky-600 mt-0.5" />
+                    <span className="leading-relaxed font-medium">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
         ) : lesson ? (
-          /* 六大分區渲染（Success State） */
+          /* 📚 六大分區渲染（Learning Mode） */
           <>
             {/* 1. 這是什麼 (Concept) */}
             <section className="space-y-2">

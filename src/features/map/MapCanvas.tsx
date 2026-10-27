@@ -21,7 +21,9 @@ interface MapCanvasProps {
   map: LearningMap;
   progressMap?: Record<string, NodeStatus>;
   selectedNodeId?: string | null;
+  orderMode?: boolean;
   onSelectNode?: (nodeId: string) => void;
+  onAddChild?: (nodeId: string) => void;
 }
 
 const nodeTypes = {
@@ -46,7 +48,9 @@ export function MapCanvas({
   map,
   progressMap = {},
   selectedNodeId = null,
+  orderMode = true,
   onSelectNode,
+  onAddChild,
 }: MapCanvasProps) {
   // 1. 初始化收合狀態（先從 localStorage 讀取，若無則依預設展開 2 層策略）
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => {
@@ -108,11 +112,13 @@ export function MapCanvas({
         ...n.data,
         status: progressMap[n.id] || 'todo',
         selected: n.id === selectedNodeId,
+        orderMode,
         onToggleCollapse: handleToggleCollapse,
         onSelectNode,
+        onAddChild,
       },
     }));
-  }, [layoutNodes, progressMap, selectedNodeId, handleToggleCollapse, onSelectNode]);
+  }, [layoutNodes, progressMap, selectedNodeId, orderMode, handleToggleCollapse, onSelectNode, onAddChild]);
 
   const flowEdges: Edge[] = useMemo(() => {
     return layoutEdges.map((e) => ({
@@ -141,12 +147,17 @@ export function MapCanvas({
   }, [flowEdges, setEdges]);
 
   return (
-    <div className="relative h-full w-full select-none overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div
+      className="relative w-full h-full select-none overflow-hidden bg-slate-50 dark:bg-slate-950"
+      style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+    >
       <ReactFlow<MapCustomNode, Edge>
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={(_event, node) => onSelectNode?.(node.id)}
+        nodesDraggable={false}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}

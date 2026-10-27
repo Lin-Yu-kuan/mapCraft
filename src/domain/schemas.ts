@@ -4,6 +4,7 @@ import type { MapNode } from './types';
 export const DifficultySchema = z.enum(['beginner', 'intermediate', 'advanced']);
 export const NodeStatusSchema = z.enum(['todo', 'learning', 'done']);
 export const LevelSchema = z.enum(['beginner', 'some', 'advanced']);
+export const NodeModeSchema = z.enum(['learning', 'brainstorm']);
 
 /**
  * 節點 Schema（遞迴定義，支援子節點樹狀展開，SPEC §4.2）
@@ -16,6 +17,7 @@ export const MapNodeSchema: z.ZodType<MapNode> = z.lazy(() =>
     difficulty: DifficultySchema,
     estMinutes: z.number().int().min(5).max(180).optional(),
     children: z.array(MapNodeSchema).max(8).optional(),
+    mode: NodeModeSchema.optional(),
   })
 );
 
@@ -51,8 +53,8 @@ export const LessonContentSchema = z.object({
   example: z
     .object({
       scenario: z.string(),
-      code: z.string().nullable().optional(),
-      language: z.string().nullable().optional(),
+      code: z.string().nullish().transform((v) => v ?? undefined),
+      language: z.string().nullish().transform((v) => v ?? undefined),
       explain: z.string(),
     })
     .optional(),
@@ -62,6 +64,18 @@ export const LessonContentSchema = z.object({
 });
 
 export type LessonContentData = z.infer<typeof LessonContentSchema>;
+
+/**
+ * 腦力激盪內容 Schema（固定發想框架：核心創意／應用情境／潛在挑戰／下一步行動）
+ */
+export const BrainstormContentSchema = z.object({
+  coreIdea: z.string().min(10).max(1500),
+  useCases: z.array(z.string()).min(1).max(8),
+  challenges: z.array(z.string()).min(1).max(8),
+  nextSteps: z.array(z.string()).min(1).max(8),
+});
+
+export type BrainstormContentData = z.infer<typeof BrainstormContentSchema>;
 
 /**
  * 備份檔格式 Schema（SPEC §4.4 & §4.5）
