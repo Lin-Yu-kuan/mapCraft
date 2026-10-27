@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { Level, GenerationOptions } from '@/domain/types';
+import { loadDemoCraft } from '@/lib/db';
 import { useGenerateMap } from './useGenerateMap';
 import { GenerationErrorPanel } from './GenerationErrorPanel';
 
@@ -349,6 +350,20 @@ export function HomePage() {
                     {sample}
                   </button>
                 ))}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const demoId = await loadDemoCraft(true);
+                  navigate(`/map/${demoId}`);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-500 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
+              >
+                <span>✨ 不想打字？點此直接試玩 TypeScript 精選示範地圖</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         )}

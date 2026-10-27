@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Lightbulb,
   CheckCircle2,
-  Clock,
   RotateCcw,
   Copy,
   Check,
@@ -670,7 +669,7 @@ export function LessonDrawer({
                 <button
                   type="button"
                   onClick={() => onUpdateStatus?.(nodeId, 'done')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-all active:scale-95 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>{t('lesson.markAsDone')}</span>
@@ -679,21 +678,10 @@ export function LessonDrawer({
                 <button
                   type="button"
                   onClick={() => onUpdateStatus?.(nodeId, 'todo')}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  <span>{t('lesson.markAsTodo')}</span>
-                </button>
-              )}
-
-              {status !== 'learning' && status !== 'done' && (
-                <button
-                  type="button"
-                  onClick={() => onUpdateStatus?.(nodeId, 'learning')}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{t('lesson.markAsLearning')}</span>
+                  <span>{t('lesson.cancelDone')}</span>
                 </button>
               )}
             </div>

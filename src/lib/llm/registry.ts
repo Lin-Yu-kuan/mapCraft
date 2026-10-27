@@ -1,6 +1,34 @@
 import type { ProviderMeta } from './types';
 
 export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
+  webgpu: {
+    id: 'webgpu',
+    name: 'WebGPU 本機端模型（免金鑰・離線運行）',
+    defaultBaseUrl: 'webgpu://local',
+    isDirectBrowserSupported: true,
+    supportsJsonSchema: false,
+    docUrl: 'https://webllm.mlc.ai/',
+    recommendedModels: [
+      {
+        id: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
+        name: 'Qwen 2.5 3B（預設推薦・約 2.3GB・繁中品質高）',
+        role: 'both',
+        description: '標準版，中文理解與架構拆解品質優異',
+      },
+      {
+        id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
+        name: 'Qwen 2.5 1.5B（輕量版・約 1.1GB・下載迅速）',
+        role: 'both',
+        description: '輕量版，初次體驗下載快、硬體要求低',
+      },
+      {
+        id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
+        name: 'Llama 3.2 3B（約 2.2GB・英文與邏輯表現佳）',
+        role: 'both',
+        description: 'Meta 輕量端側模型',
+      },
+    ],
+  },
   openai: {
     id: 'openai',
     name: 'OpenAI',

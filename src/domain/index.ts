@@ -5,3 +5,4 @@ export * from './layout';
 export * from './prompts';
 export * from './export/markdown';
 export * from './export/opml';
+export * from './export/html';

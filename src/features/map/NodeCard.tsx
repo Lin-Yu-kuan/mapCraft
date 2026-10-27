@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { CheckCircle2, Circle, Clock, ChevronRight, ChevronDown, Plus, Lightbulb } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, ChevronDown, Plus, Lightbulb } from 'lucide-react';
 import type { LayoutNodeData } from '@/domain/layout';
 import type { NodeStatus } from '@/domain/types';
 
@@ -53,7 +53,8 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
   const difficulty = node.difficulty || 'beginner';
   const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.beginner;
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onSelectNode?.(node.id);
   };
 
@@ -70,7 +71,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleCardClick();
+          onSelectNode?.(node.id);
         }
       }}
       className={`group relative flex h-[90px] w-[260px] flex-col justify-between rounded-xl border p-3 text-left shadow-xs transition-all duration-150 select-none cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 ${
@@ -121,15 +122,13 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           </h4>
         </div>
 
-        {/* 學習狀態指示 */}
+        {/* 學習狀態指示（二態：已完成 done vs 未完成 todo） */}
         {!isRoot && (
           <div className="shrink-0">
             {status === 'done' ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label="已完成" />
-            ) : status === 'learning' ? (
-              <Clock className="h-4 w-4 text-amber-500 animate-pulse" aria-label="學習中" />
             ) : (
-              <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label="未開始" />
+              <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label="未完成" />
             )}
           </div>
         )}

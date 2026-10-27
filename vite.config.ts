@@ -6,7 +6,7 @@ import path from 'path';
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.BASE_PATH || '/',
+  base: process.env.BASE_PATH || './',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -21,6 +21,7 @@ export default defineConfig({
           'vendor-canvas': ['@xyflow/react', 'd3-hierarchy'],
           'vendor-db': ['dexie'],
           'vendor-i18n': ['i18next', 'react-i18next'],
+          'vendor-webllm': ['@mlc-ai/web-llm'],
         },
       },
     },

@@ -12,10 +12,12 @@
 ## 核心特色
 
 1. **中文自學體驗優先**：專為自學者設計，文案與 Prompt 皆針對繁體中文語境調校，告別生硬翻譯。
-2. **BYOK 透明與隱私安全**：完全無後端伺服器，不經手任何金鑰與費用；支援 OpenAI、Anthropic、Google Gemini、DeepSeek、OpenRouter、本地 Ollama 或任意 OpenAI 相容 API。
-3. **地圖即課程**：節點不只是大綱，點擊即可依序展開「白話核心概念」、「為什麼重要」、「實戰範例」、「常見誤解」、「重點回顧」與「隨堂測驗」。
-4. **資料自由帶走**：支援完整 JSON 備份還原、Markdown 結構化筆記匯出，以及心智圖軟體標準 OPML 匯出。
-5. **極致輕量與快速自架**：純靜態網站設計，可一鍵部署至 Cloudflare Pages、Vercel、GitHub Pages 或自架 Docker。
+2. **免安裝線上體驗（Live Demo）**：透過 GitHub Pages 免費託管，內建精選示範地圖（TypeScript 核心架構），免填金鑰點開即玩！
+3. **支援純本機 WebGPU 模型**：無需任何 API 金鑰與連網，瀏覽器端透過 WebGPU 直接執行 3B / 1.5B 模型（如 Qwen 2.5），權重快取於本機，離線亦可使用。
+4. **BYOK 透明與多元連線**：支援 OpenAI、Anthropic、Google Gemini、DeepSeek、OpenRouter、本地 Ollama 或自訂 OpenAI 相容端點。
+5. **地圖即課程**：節點支援「學習模式」與「腦力激盪模式」，展開「白話核心概念」、「為什麼重要」、「實戰範例」、「常見誤解」、「重點回顧」與「隨堂測驗」。
+6. **全方位格式匯出**：支援單一獨立 HTML 互動手冊（含樹狀導覽與完整筆記、支援列印 PDF）、Markdown 筆記、心智圖標準 OPML，以及完整 JSON 備份。
+7. **極致輕量與自動部署**：純靜態前端架構，內建 GitHub Actions 自動部署至 GitHub Pages，亦可一鍵部署至 Vercel 或 Docker。
 
 ---
 

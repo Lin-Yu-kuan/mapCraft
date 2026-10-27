@@ -10,6 +10,7 @@ import {
   PartyPopper,
   Download,
   FileText,
+  FileCode,
   Network,
   ListOrdered,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import type { LearningMap, NodeProgress, NodeStatus, MapNode } from '@/domain/ty
 import { countLearningNodes, findNode, addChildNodes } from '@/domain/tree';
 import { generateMapMarkdown } from '@/domain/export/markdown';
 import { generateMapOpml } from '@/domain/export/opml';
+import { generateMapHtml } from '@/domain/export/html';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
 import { lessonsRepo } from '@/lib/db/repos/lessons';
@@ -171,7 +173,7 @@ export function MapPage() {
   );
 
   const handleSelectNode = useCallback((nodeId: string) => {
-    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+    setSelectedNodeId(nodeId);
   }, []);
 
   const handleCloseDrawer = useCallback(() => {
@@ -304,6 +306,19 @@ export function MapPage() {
     }
   };
 
+  // 匯出單一獨立 HTML 互動手冊
+  const handleExportHtml = async () => {
+    if (!map) return;
+    try {
+      const lessons = await lessonsRepo.getByMapId(map.id);
+      const htmlContent = generateMapHtml(map, progressList, lessons);
+      const safeTitle = map.title.replace(/[\\/:*?"<>|]/g, '_');
+      downloadBlob(`${safeTitle}.html`, htmlContent, 'text/html;charset=utf-8');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   // 匯出單張地圖備份
   const handleExportBackup = async () => {
     if (!map) return;
@@ -398,6 +413,17 @@ export function MapPage() {
             <FileText className="h-3.5 w-3.5 text-emerald-600" />
             <span className="hidden sm:inline">{t('map.exportMarkdown')}</span>
             <span className="sm:hidden">Markdown</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportHtml}
+            aria-label={t('map.exportHtml')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <FileCode className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">{t('map.exportHtml')}</span>
+            <span className="sm:hidden">HTML</span>
           </button>
 
           <button

@@ -16,12 +16,14 @@ import {
   AlertCircle,
   Download,
   Upload,
+  Sparkles,
 } from 'lucide-react';
 
 import type { LearningMap, NodeProgress } from '@/domain/types';
 import { countLearningNodes } from '@/domain/tree';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
+import { loadDemoCraft } from '@/lib/db';
 import { createBackupData, downloadBackupFile, importBackupData } from '@/lib/storage/backup';
 
 interface MapWithProgress {
@@ -178,6 +180,20 @@ export function LibraryPage() {
     }
   };
 
+  const handleLoadDemo = async () => {
+    try {
+      setIsLoading(true);
+      const demoId = await loadDemoCraft(true);
+      setSuccessMsg(t('library.demoLoaded'));
+      await loadMaps();
+      navigate(`/map/${demoId}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-6">
       {/* 隱藏的檔案選擇器 */}
@@ -219,6 +235,15 @@ export function LibraryPage() {
           >
             <Upload className="h-4 w-4" />
             <span>{t('library.importBackup')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLoadDemo}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-2xs hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+          >
+            <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span>示範地圖</span>
           </button>
 
           <Link
@@ -283,13 +308,23 @@ export function LibraryPage() {
           <p className="mt-1.5 max-w-sm text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {t('library.emptyDesc')}
           </p>
-          <Link
-            to="/"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-          >
-            <Compass className="h-4 w-4" />
-            <span>{t('library.craftMap')}</span>
-          </Link>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleLoadDemo}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs sm:text-sm font-semibold text-emerald-800 shadow-xs hover:bg-emerald-100 transition-all dark:border-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200"
+            >
+              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{t('library.loadDemo')}</span>
+            </button>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            >
+              <Compass className="h-4 w-4" />
+              <span>{t('library.craftMap')}</span>
+            </Link>
+          </div>
         </div>
       ) : (
         /* 地圖清單（Success State） */
