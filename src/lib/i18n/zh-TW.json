@@ -151,5 +151,12 @@
     "notFoundTitle": "找不到頁面",
     "notFoundDesc": "您所尋找的頁面不存在或已被移除。",
     "backToHome": "返回首頁"
+  },
+  "map": {
+    "clickNodeHint": "點擊節點開啟微教學抽屜",
+    "exportMarkdown": "匯出 Markdown 筆記",
+    "exportBackup": "匯出地圖備份",
+    "exportOpml": "匯出 OPML 心智圖",
+    "allDoneCelebration": "恭喜！你已完成這張地圖的所有知識點！"
   }
 }

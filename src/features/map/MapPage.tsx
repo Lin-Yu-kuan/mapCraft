@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper, Download, FileText } from 'lucide-react';
+import { MapPin, AlertCircle, Compass, ArrowLeft, Loader2, PartyPopper, Download, FileText, Network } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus } from '@/domain/types';
 import { countLearningNodes } from '@/domain/tree';
 import { generateMapMarkdown } from '@/domain/export/markdown';
+import { generateMapOpml } from '@/domain/export/opml';
 import { mapsRepo } from '@/lib/db/repos/maps';
 import { progressRepo } from '@/lib/db/repos/progress';
 import { lessonsRepo } from '@/lib/db/repos/lessons';
@@ -250,6 +251,18 @@ export function MapPage() {
     }
   };
 
+  // 匯出 OPML 心智圖
+  const handleExportOpml = () => {
+    if (!map) return;
+    try {
+      const opmlContent = generateMapOpml(map, progressList);
+      const safeTitle = map.title.replace(/[\\/:*?"<>|]/g, '_');
+      downloadBlob(`${safeTitle}.opml`, opmlContent, 'text/xml;charset=utf-8');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   // 狀態 4：正常成功渲染畫布與抽屜（Success）
   return (
     <div className="relative flex flex-1 flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden">
@@ -274,7 +287,7 @@ export function MapPage() {
             })}
           </span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <span className="text-[11px] text-slate-400">點擊節點開啟微教學抽屜</span>
+          <span className="text-[11px] text-slate-400">{t('map.clickNodeHint')}</span>
         </div>
 
         {/* 匯出操作按鈕 */}
@@ -288,6 +301,17 @@ export function MapPage() {
             <FileText className="h-3.5 w-3.5 text-emerald-600" />
             <span className="hidden sm:inline">{t('map.exportMarkdown')}</span>
             <span className="sm:hidden">Markdown</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportOpml}
+            aria-label={t('map.exportOpml')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <Network className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">{t('map.exportOpml')}</span>
+            <span className="sm:hidden">OPML</span>
           </button>
 
           <button
@@ -310,7 +334,7 @@ export function MapPage() {
           className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 rounded-full border border-emerald-300 bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg animate-bounce"
         >
           <PartyPopper className="h-4 w-4" />
-          <span>恭喜！你已完成這張地圖的所有知識點！</span>
+          <span>{t('map.allDoneCelebration')}</span>
           <button
             type="button"
             onClick={() => setShowCelebration(false)}
