@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { CheckCircle2, Circle, ChevronRight, ChevronDown, Plus, Lightbulb } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, ChevronDown, Plus, Lightbulb, Trash2 } from 'lucide-react';
 import type { LayoutNodeData } from '@/domain/layout';
 import type { NodeStatus } from '@/domain/types';
 
@@ -11,6 +11,7 @@ export interface NodeCardCustomData extends LayoutNodeData {
   onToggleCollapse?: (nodeId: string) => void;
   onSelectNode?: (nodeId: string) => void;
   onAddChild?: (nodeId: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
   [key: string]: unknown;
 }
 
@@ -48,13 +49,13 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
     onToggleCollapse,
     onSelectNode,
     onAddChild,
+    onDeleteNode,
   } = data;
 
   const difficulty = node.difficulty || 'beginner';
   const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.beginner;
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCardClick = () => {
     onSelectNode?.(node.id);
   };
 
@@ -74,7 +75,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           onSelectNode?.(node.id);
         }
       }}
-      className={`group relative flex h-[90px] w-[260px] flex-col justify-between rounded-xl border p-3 text-left shadow-xs transition-all duration-150 select-none cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+      className={`group relative flex h-[90px] w-[260px] flex-col justify-between rounded-xl border p-3 text-left shadow-xs transition-all duration-150 select-none cursor-pointer active:scale-[0.98] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 ${
         isRoot
           ? 'border-emerald-500 bg-emerald-50/80 shadow-emerald-500/10 dark:border-emerald-500 dark:bg-emerald-950/50'
           : selected
@@ -105,7 +106,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
         />
       )}
 
-      {/* 頂部：標題與狀態指示 */}
+      {/* 頂部：標題與狀態指示/刪除按鈕 */}
       <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex items-center gap-1.5">
           {/* 順序模式序號徽章 */}
@@ -122,14 +123,26 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           </h4>
         </div>
 
-        {/* 學習狀態指示（二態：已完成 done vs 未完成 todo） */}
+        {/* 頂部右側：學習狀態指示與移除按鈕 */}
         {!isRoot && (
-          <div className="shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {status === 'done' ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label="已完成" />
             ) : (
               <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label="未完成" />
             )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteNode?.(node.id);
+              }}
+              title="移除此節點及其子分支"
+              aria-label="移除此節點及其子分支"
+              className="flex h-5 w-5 items-center justify-center rounded-md text-slate-300 hover:bg-rose-50 hover:text-rose-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all dark:text-slate-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
           </div>
         )}
       </div>

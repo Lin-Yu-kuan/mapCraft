@@ -13,6 +13,8 @@ import {
   getNodeParent,
   getNodeSiblings,
   addChildNodes,
+  removeNode,
+  getSubtreeNodeIds,
 } from '@/domain/tree';
 
 describe('domain/tree', () => {
@@ -406,4 +408,59 @@ describe('domain/tree', () => {
       expect(newRoot.children?.[1]?.label).toBe('單元 2');
     });
   });
+
+  describe('removeNode & getSubtreeNodeIds', () => {
+    const testTree: MapNode = {
+      id: '0',
+      label: 'Root',
+      summary: 'Root summary',
+      difficulty: 'beginner',
+      children: [
+        {
+          id: '1',
+          label: 'Node 1',
+          summary: 'Summary 1',
+          difficulty: 'beginner',
+          children: [
+            { id: '1.1', label: 'Child 1.1', summary: 'Sub 1.1', difficulty: 'beginner' },
+            { id: '1.2', label: 'Child 1.2', summary: 'Sub 1.2', difficulty: 'intermediate' },
+          ],
+        },
+        {
+          id: '2',
+          label: 'Node 2',
+          summary: 'Summary 2',
+          difficulty: 'advanced',
+        },
+      ],
+    };
+
+    it('getSubtreeNodeIds 應取得自身與所有子孫 ID', () => {
+      const ids = getSubtreeNodeIds(testTree, '1');
+      expect(ids).toEqual(['1', '1.1', '1.2']);
+    });
+
+    it('removeNode 應連帶刪除目標節點及其所有子節點，並重新分配編號', () => {
+      const newTree = removeNode(testTree, '1');
+      expect(newTree.children).toHaveLength(1);
+      // 原本的 Node 2 被重新分配為 1
+      expect(newTree.children?.[0]?.label).toBe('Node 2');
+      expect(newTree.children?.[0]?.id).toBe('1');
+    });
+
+    it('刪除葉節點時不影響其父節點其他兄弟', () => {
+      const newTree = removeNode(testTree, '1.1');
+      const node1 = findNode(newTree, '1');
+      expect(node1?.children).toHaveLength(1);
+      expect(node1?.children?.[0]?.label).toBe('Child 1.2');
+      expect(node1?.children?.[0]?.id).toBe('1.1'); // 重新分配為 1.1
+    });
+
+    it('不允許刪除根節點 0', () => {
+      const newTree = removeNode(testTree, '0');
+      expect(newTree.id).toBe('0');
+      expect(newTree.children).toHaveLength(2);
+    });
+  });
 });
+

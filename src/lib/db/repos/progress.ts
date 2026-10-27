@@ -18,6 +18,10 @@ export const progressRepo = {
     await db.progress.bulkPut(items);
   },
 
+  async delete(mapId: string, nodeId: string): Promise<void> {
+    await db.progress.delete([mapId, nodeId]);
+  },
+
   async deleteByMapId(mapId: string): Promise<number> {
     return db.progress.where('mapId').equals(mapId).delete();
   },

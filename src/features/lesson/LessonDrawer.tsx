@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Target,
   Rocket,
+  Trash2,
 } from 'lucide-react';
 
 import type { LearningMap, NodeStatus, NodeMode } from '@/domain/types';
@@ -34,6 +35,7 @@ interface LessonDrawerProps {
   onClose: () => void;
   onUpdateStatus?: (nodeId: string, nextStatus: NodeStatus) => void;
   onSelectNode?: (nodeId: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
 }
 
 export function LessonDrawer({
@@ -43,6 +45,7 @@ export function LessonDrawer({
   onClose,
   onUpdateStatus,
   onSelectNode,
+  onDeleteNode,
 }: LessonDrawerProps) {
   const { t } = useTranslation();
   const {
@@ -291,14 +294,28 @@ export function LessonDrawer({
           </h2>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t('common.close')}
-          className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-200"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {nodeId !== '0' && (
+            <button
+              type="button"
+              onClick={() => onDeleteNode?.(nodeId)}
+              title="移除此節點及其子分支"
+              aria-label="移除此節點及其子分支"
+              className="rounded-xl p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors dark:hover:bg-rose-950/60 dark:hover:text-rose-400"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* 軟性依賴提醒彈窗 */}

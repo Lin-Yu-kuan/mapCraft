@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus, MapNode } from '@/domain/types';
-import { countLearningNodes, findNode, addChildNodes } from '@/domain/tree';
+import { countLearningNodes, findNode, addChildNodes, removeNode, getSubtreeNodeIds } from '@/domain/tree';
 import { generateMapMarkdown } from '@/domain/export/markdown';
 import { generateMapOpml } from '@/domain/export/opml';
 import { generateMapHtml } from '@/domain/export/html';
@@ -214,6 +214,56 @@ export function MapPage() {
     [map, subtreeTargetNode]
   );
 
+  // 移除指定節點（連帶刪除子樹，並跳出確認警示窗）
+  const handleDeleteNode = useCallback(
+    async (nodeId: string) => {
+      if (!map || nodeId === '0') return;
+      const target = findNode(map.root, nodeId);
+      if (!target) return;
+
+      const subtreeIds = getSubtreeNodeIds(map.root, nodeId);
+      const childrenCount = subtreeIds.length - 1;
+
+      const confirmMsg =
+        childrenCount > 0
+          ? `⚠️ 確定要移除節點「${target.label}」嗎？\n\n這將會【連帶刪除其底下的 ${childrenCount} 個子節點】以及相關的學習進度與筆記，此操作無法復原！`
+          : `確定要移除節點「${target.label}」嗎？\n\n相關的學習進度與筆記也將一併移除。`;
+
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+
+      const newRoot = removeNode(map.root, nodeId);
+      const updatedMap: LearningMap = {
+        ...map,
+        root: newRoot,
+        updatedAt: Date.now(),
+      };
+
+      try {
+        await mapsRepo.save(updatedMap);
+        setMap(updatedMap);
+
+        // 若抽屜開啟中的節點在被刪除的子樹內，自動關閉抽屜
+        if (selectedNodeId && subtreeIds.includes(selectedNodeId)) {
+          setSelectedNodeId(null);
+        }
+
+        // 清理被刪除子樹的進度與教材快取
+        for (const id of subtreeIds) {
+          await progressRepo.delete(map.id, id);
+          await lessonsRepo.delete(map.id, id);
+        }
+
+        const newProgress = await progressRepo.getByMapId(map.id);
+        setProgressList(newProgress);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [map, selectedNodeId]
+  );
+
   // 鍵盤 Esc 關閉抽屜
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -370,6 +420,7 @@ export function MapPage() {
           orderMode={orderMode}
           onSelectNode={handleSelectNode}
           onAddChild={handleOpenAddChild}
+          onDeleteNode={handleDeleteNode}
         />
       </div>
 
@@ -494,6 +545,7 @@ export function MapPage() {
           onClose={handleCloseDrawer}
           onUpdateStatus={handleUpdateStatus}
           onSelectNode={handleSelectNode}
+          onDeleteNode={handleDeleteNode}
         />
       )}
 

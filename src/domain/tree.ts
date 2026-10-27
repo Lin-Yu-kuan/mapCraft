@@ -327,3 +327,47 @@ export function addChildNodes(
   return updatedTree;
 }
 
+/**
+ * 取得指定節點底下的所有節點 ID（包含自身）
+ */
+export function getSubtreeNodeIds(root: MapNode, nodeId: string): string[] {
+  const target = findNode(root, nodeId);
+  if (!target) return [];
+  const ids: string[] = [];
+  walkTree(target, (n) => ids.push(n.id));
+  return ids;
+}
+
+/**
+ * 從樹中移除指定節點（連帶刪除後面子樹），並重新分配編號
+ * 注意：根節點（id: '0'）不允許被刪除
+ */
+export function removeNode(root: MapNode, nodeId: string): MapNode {
+  if (root.id === nodeId) {
+    // 根節點不可刪除，直接回傳
+    return root;
+  }
+
+  function filterAndClone(node: MapNode): MapNode {
+    if (!node.children || node.children.length === 0) {
+      return { ...node };
+    }
+
+    const filtered = node.children
+      .filter((child) => child.id !== nodeId)
+      .map(filterAndClone);
+
+    return {
+      ...node,
+      children: filtered,
+    };
+  }
+
+  const newTree = filterAndClone(root);
+  if (newTree.children) {
+    newTree.children = reassignIds(newTree.children);
+  }
+  return newTree;
+}
+
+

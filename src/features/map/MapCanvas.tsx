@@ -24,6 +24,7 @@ interface MapCanvasProps {
   orderMode?: boolean;
   onSelectNode?: (nodeId: string) => void;
   onAddChild?: (nodeId: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
 }
 
 const nodeTypes = {
@@ -51,6 +52,7 @@ export function MapCanvas({
   orderMode = true,
   onSelectNode,
   onAddChild,
+  onDeleteNode,
 }: MapCanvasProps) {
   // 1. 初始化收合狀態（先從 localStorage 讀取，若無則依預設展開 2 層策略）
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => {
@@ -116,9 +118,10 @@ export function MapCanvas({
         onToggleCollapse: handleToggleCollapse,
         onSelectNode,
         onAddChild,
+        onDeleteNode,
       },
     }));
-  }, [layoutNodes, progressMap, selectedNodeId, orderMode, handleToggleCollapse, onSelectNode, onAddChild]);
+  }, [layoutNodes, progressMap, selectedNodeId, orderMode, handleToggleCollapse, onSelectNode, onAddChild, onDeleteNode]);
 
   const flowEdges: Edge[] = useMemo(() => {
     return layoutEdges.map((e) => ({
@@ -126,7 +129,7 @@ export function MapCanvas({
       source: e.source,
       target: e.target,
       type: e.type,
-      animated: progressMap[e.target] === 'learning',
+      animated: false, // 移除虛線流動，全數採用乾淨專業實線
       style: {
         stroke: progressMap[e.target] === 'done' ? '#10b981' : '#94a3b8',
         strokeWidth: 2,
@@ -165,7 +168,7 @@ export function MapCanvas({
         maxZoom={1.8}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#cbd5e1" className="opacity-40 dark:opacity-20" />
         <Controls showInteractive={false} className="bg-white shadow-sm dark:bg-slate-900" />
         <MiniMap
           nodeColor={(n) => {
