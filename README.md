@@ -3,6 +3,12 @@
 > *AI drafts the map. You craft the learning.*（AI 起稿，你來完成。）
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Deploy to GitHub Pages](https://github.com/Lin-Yu-kuan/mapCraft/actions/workflows/deploy.yml/badge.svg)](https://github.com/Lin-Yu-kuan/mapCraft/actions/workflows/deploy.yml)
+
+👉 **線上免安裝體驗（Live Demo）**：[https://Lin-Yu-kuan.github.io/mapCraft/](https://Lin-Yu-kuan.github.io/mapCraft/)  
+*(免註冊、免伺服器、支援免金鑰 TypeScript 示範地圖或 WebGPU 離線大模型即刻試玩！)*
+
+---
 
 **MapCraft** 是一個免費、開源、純前端、無後端、BYOK（自備金鑰）的心智圖 AI 學習網站。  
 使用者輸入任何想學習的主題 → LLM 規劃並產出樹狀學習地圖 → 互動畫布探索 → 點擊節點隨選生成微教學與測驗 → 打勾推進學習進度 → 所有紀錄保存在本機。
