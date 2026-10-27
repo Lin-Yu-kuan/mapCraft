@@ -133,8 +133,8 @@ export function HomePage() {
                 <div className="h-full w-2/3 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="flex justify-between text-[11px] text-emerald-600 dark:text-emerald-400">
-                <span>拆解知識樹狀階層</span>
-                <span>推導學習先後依賴</span>
+                <span>{t('home.stepHierarchy')}</span>
+                <span>{t('home.stepDependencies')}</span>
               </div>
             </div>
 
@@ -160,7 +160,7 @@ export function HomePage() {
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder={t('home.topicInputPlaceholder')}
                 disabled={isGenerating}
-                className="w-full rounded-2xl border border-slate-300 bg-white py-4 pl-5 pr-32 text-base text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-emerald-400 dark:focus:ring-emerald-400/10"
+                className="w-full rounded-2xl border border-slate-300 bg-white py-4 pl-5 pr-40 sm:pr-44 text-base text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-emerald-400 dark:focus:ring-emerald-400/10"
               />
               <button
                 type="submit"
@@ -257,7 +257,7 @@ export function HomePage() {
                       <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                         <span>{t('generation.maxDepthLabel')}</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {maxDepth} 層
+                          {maxDepth} {t('home.unitLevels')}
                         </span>
                       </div>
                       <input
@@ -275,7 +275,7 @@ export function HomePage() {
                       <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                         <span>{t('generation.maxBreadthLabel')}</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {maxBreadth} 個
+                          {maxBreadth} {t('home.unitItems')}
                         </span>
                       </div>
                       <input
@@ -293,7 +293,7 @@ export function HomePage() {
                       <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                         <span>{t('generation.maxNodesLabel')}</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {maxNodes} 節點
+                          {maxNodes} {t('home.unitNodes')}
                         </span>
                       </div>
                       <input
@@ -361,7 +361,7 @@ export function HomePage() {
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-500 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
               >
-                <span>✨ 不想打字？點此直接試玩 TypeScript 精選示範地圖</span>
+                <span>{t('home.quickDemo')}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>

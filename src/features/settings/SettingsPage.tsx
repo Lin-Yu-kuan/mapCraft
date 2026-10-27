@@ -287,22 +287,22 @@ export function SettingsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold text-emerald-950 dark:text-emerald-200">
-                      純前端 WebGPU 本機運行模式
+                      {t('settings.webgpuTitle')}
                     </h3>
                     {hasWebGPUSupport ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200">
                         <CheckCircle2 className="h-3 w-3" />
-                        已偵測支援 WebGPU
+                        {t('settings.webgpuSupported')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-800 dark:bg-rose-900/80 dark:text-rose-200">
                         <AlertCircle className="h-3 w-3" />
-                        瀏覽器未啟用 WebGPU
+                        {t('settings.webgpuNotSupported')}
                       </span>
                     )}
                   </div>
                   <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-                    完全不需要任何 API 金鑰，所有 AI 運算皆在您的瀏覽器端本機完成。初次使用會自動下載模型權重並永久快取於本機 CacheStorage，後續即可離線極速運算！
+                    {t('settings.webgpuDesc')}
                   </p>
                 </div>
               </div>
@@ -310,19 +310,19 @@ export function SettingsPage() {
               {/* 容量與版本建議 */}
               <div className="rounded-lg bg-white/80 p-3 text-xs space-y-1.5 border border-emerald-100 dark:border-emerald-900/40 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300">
                 <div className="font-semibold text-slate-800 dark:text-slate-200">
-                  💡 建議模型選擇：
+                  {t('settings.webgpuModelSuggestions')}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                    ✦ Qwen 2.5 3B（預設推薦）：
+                    {t('settings.webgpuModel3B')}
                   </span>
-                  <span>約 2.3GB，回答品質極高、教學架構最完整</span>
+                  <span>{t('settings.webgpuModel3BDesc')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-slate-700 dark:text-slate-300">
-                    ✦ Qwen 2.5 1.5B（輕量版）：
+                    {t('settings.webgpuModel15B')}
                   </span>
-                  <span>約 1.1GB，初次下載極快，適合輕裝體驗</span>
+                  <span>{t('settings.webgpuModel15BDesc')}</span>
                 </div>
               </div>
 
@@ -357,9 +357,9 @@ export function SettingsPage() {
                       });
                       const res = await p.ping();
                       if (res.ok) {
-                        alert('🎉 WebGPU 模型載入完成！您現在可以免金鑰順暢使用 MapCraft。');
+                        alert(t('settings.webgpuReady'));
                       } else {
-                        alert(res.error?.messageForUser || '載入失敗');
+                        alert(res.error?.messageForUser || t('common.error'));
                       }
                     } catch (err: unknown) {
                       alert(err instanceof Error ? err.message : String(err));
@@ -372,12 +372,12 @@ export function SettingsPage() {
                   {isPreloadingGpu ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>正在下載/初始化模型中...</span>
+                      <span>{t('settings.webgpuPreloading')}</span>
                     </>
                   ) : (
                     <>
                       <Cpu className="h-3.5 w-3.5" />
-                      <span>預先下載/驗證 WebGPU 模型</span>
+                      <span>{t('settings.webgpuPreload')}</span>
                     </>
                   )}
                 </button>
@@ -413,7 +413,7 @@ export function SettingsPage() {
                       className="text-xs text-emerald-600 hover:underline dark:text-emerald-400 inline-flex items-center gap-1"
                     >
                       <HelpCircle className="h-3.5 w-3.5" />
-                      取得 {activeMeta.name} 金鑰
+                      {t('settings.getKey', { name: activeMeta.name })}
                     </a>
                   )}
                 </div>

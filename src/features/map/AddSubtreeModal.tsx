@@ -90,8 +90,8 @@ export function AddSubtreeModal({
       const meta = getProviderMeta(providerId);
       const apiKey = getStoredApiKey(providerId);
 
-      if (!apiKey && providerId !== 'ollama') {
-        setError('尚未填寫 API 金鑰，請先至設定頁面設定金鑰後再生成。');
+      if (!apiKey && providerId !== 'ollama' && providerId !== 'webgpu') {
+        setError(t('map.missingKeySubtree'));
         setIsGenerating(false);
         return;
       }
@@ -136,7 +136,7 @@ export function AddSubtreeModal({
       const validated = parseAndValidateJson(res.text, SubtreeResponseSchema);
 
       if (!validated.children || validated.children.length === 0) {
-        setError('AI 未回傳任何子分支，請放寬條件重試。');
+        setError(t('map.emptyChildrenError'));
         setIsGenerating(false);
         return;
       }
@@ -164,7 +164,7 @@ export function AddSubtreeModal({
     } finally {
       setIsGenerating(false);
     }
-  }, [map, targetNode, mode, depth, breadth, onSubtreeAdded, onClose]);
+  }, [map, targetNode, mode, depth, breadth, onSubtreeAdded, onClose, t]);
 
   if (!isOpen) return null;
 
@@ -183,7 +183,7 @@ export function AddSubtreeModal({
               {t('map.addSubtreeTitle', { label: targetNode.label })}
             </h3>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              為「{targetNode.label}」擴充更多下層延伸分支
+              {t('map.addSubtreeSubtitle', { label: targetNode.label })}
             </p>
           </div>
           <button
@@ -249,8 +249,8 @@ export function AddSubtreeModal({
                 >
                   <BookOpen className="h-4 w-4 text-emerald-600" />
                   <div>
-                    <span className="block font-medium">學習模式</span>
-                    <span className="text-[10px] text-slate-400">掌握架構與知識點</span>
+                    <span className="block font-medium">{t('map.modeLearning')}</span>
+                    <span className="text-[10px] text-slate-400">{t('map.modeLearningDesc')}</span>
                   </div>
                 </button>
 
@@ -265,8 +265,8 @@ export function AddSubtreeModal({
                 >
                   <Lightbulb className="h-4 w-4 text-amber-600" />
                   <div>
-                    <span className="block font-medium">腦力激盪模式</span>
-                    <span className="text-[10px] text-slate-400">發想主題點子與應用</span>
+                    <span className="block font-medium">{t('map.modeBrainstorm')}</span>
+                    <span className="text-[10px] text-slate-400">{t('map.modeBrainstormDesc')}</span>
                   </div>
                 </button>
               </div>
@@ -279,7 +279,9 @@ export function AddSubtreeModal({
                   <span className="font-medium text-slate-700 dark:text-slate-300">
                     {t('map.branchDepth')}
                   </span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{depth} 層</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {depth} {t('map.depthUnit')}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -289,7 +291,7 @@ export function AddSubtreeModal({
                   onChange={(e) => setDepth(parseInt(e.target.value, 10))}
                   className="w-full accent-emerald-600"
                 />
-                <span className="text-[10px] text-slate-400">預設 1 層（直接子節點）</span>
+                <span className="text-[10px] text-slate-400">{t('map.depthDefaultDesc')}</span>
               </div>
 
               <div className="space-y-1.5">
@@ -297,7 +299,9 @@ export function AddSubtreeModal({
                   <span className="font-medium text-slate-700 dark:text-slate-300">
                     {t('map.branchBreadth')}
                   </span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{breadth} 個</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {breadth} {t('map.breadthUnit')}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -307,7 +311,7 @@ export function AddSubtreeModal({
                   onChange={(e) => setBreadth(parseInt(e.target.value, 10))}
                   className="w-full accent-emerald-600"
                 />
-                <span className="text-[10px] text-slate-400">預設 3 個平行分支</span>
+                <span className="text-[10px] text-slate-400">{t('map.breadthDefaultDesc')}</span>
               </div>
             </div>
 
@@ -327,7 +331,7 @@ export function AddSubtreeModal({
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    <span>產生 {breadth} 個子分支</span>
+                    <span>{t('map.generateBranchesBtn', { count: breadth })}</span>
                   </>
                 )}
               </button>
@@ -375,9 +379,9 @@ export function AddSubtreeModal({
                   onChange={(e) => setManualDifficulty(e.target.value as Difficulty)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                 >
-                  <option value="beginner">入門（Beginner）</option>
-                  <option value="intermediate">進階（Intermediate）</option>
-                  <option value="advanced">精通（Advanced）</option>
+                  <option value="beginner">{t('nodeCard.difficultyBeginner')}</option>
+                  <option value="intermediate">{t('nodeCard.difficultyIntermediate')}</option>
+                  <option value="advanced">{t('nodeCard.difficultyAdvanced')}</option>
                 </select>
               </div>
 
@@ -390,8 +394,8 @@ export function AddSubtreeModal({
                   onChange={(e) => setManualMode(e.target.value as NodeMode)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                 >
-                  <option value="learning">學習模式</option>
-                  <option value="brainstorm">腦力激盪模式</option>
+                  <option value="learning">{t('map.modeLearning')}</option>
+                  <option value="brainstorm">{t('map.modeBrainstorm')}</option>
                 </select>
               </div>
             </div>

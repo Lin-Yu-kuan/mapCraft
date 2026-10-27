@@ -277,7 +277,7 @@ export function LessonDrawer({
       {/* 桌面端左側橫向拖曳邊界把手（Resize Handle） */}
       <div
         onMouseDown={startResizing}
-        title="按住向左/右拖曳調整面板大小"
+        title={t('lesson.resizeHandleTitle')}
         className="hidden sm:block absolute left-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-emerald-500/40 active:bg-emerald-600 transition-colors z-20 group"
       >
         <div className="absolute top-1/2 left-0.5 -translate-y-1/2 h-8 w-1 rounded-full bg-slate-300 opacity-0 group-hover:opacity-100 dark:bg-slate-700" />
@@ -299,8 +299,8 @@ export function LessonDrawer({
             <button
               type="button"
               onClick={() => onDeleteNode?.(nodeId)}
-              title="移除此節點及其子分支"
-              aria-label="移除此節點及其子分支"
+              title={t('nodeCard.deleteAria')}
+              aria-label={t('nodeCard.deleteAria')}
               className="rounded-xl p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors dark:hover:bg-rose-950/60 dark:hover:text-rose-400"
             >
               <Trash2 className="h-4 w-4" />
@@ -412,7 +412,9 @@ export function LessonDrawer({
               </p>
               {currentNode.summary && (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-xs text-slate-600 shadow-2xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                  <span className="font-semibold text-slate-900 dark:text-white block mb-1">🎯 本知識點綱要：</span>
+                  <span className="font-semibold text-slate-900 dark:text-white block mb-1">
+                    {t('lesson.nodeSummaryTitle')}
+                  </span>
                   {currentNode.summary}
                 </div>
               )}

@@ -86,11 +86,12 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
           <button
             type="button"
             onClick={toggleLanguage}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
             aria-label="Toggle language"
             title={i18n.language.startsWith('zh') ? 'Switch to English' : '切換為繁體中文'}
           >
-            <Languages className="h-4 w-4" aria-hidden="true" />
+            <Languages className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{i18n.language.startsWith('zh') ? 'EN' : '繁中'}</span>
           </button>
 
           <button
@@ -98,7 +99,7 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
             onClick={toggleTheme}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
             aria-label={t('topbar.themeToggleAria')}
-            title={actualTheme === 'dark' ? '切換為淺色模式' : '切換為深色模式'}
+            title={actualTheme === 'dark' ? t('topbar.themeLightTitle') : t('topbar.themeDarkTitle')}
           >
             {actualTheme === 'dark' ? (
               <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />

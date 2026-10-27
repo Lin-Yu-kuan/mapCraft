@@ -226,8 +226,8 @@ export function MapPage() {
 
       const confirmMsg =
         childrenCount > 0
-          ? `⚠️ 確定要移除節點「${target.label}」嗎？\n\n這將會【連帶刪除其底下的 ${childrenCount} 個子節點】以及相關的學習進度與筆記，此操作無法復原！`
-          : `確定要移除節點「${target.label}」嗎？\n\n相關的學習進度與筆記也將一併移除。`;
+          ? t('map.deleteNodeConfirmSubtree', { label: target.label, count: childrenCount })
+          : t('map.deleteNodeConfirmSingle', { label: target.label });
 
       if (!window.confirm(confirmMsg)) {
         return;
@@ -261,7 +261,7 @@ export function MapPage() {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [map, selectedNodeId]
+    [map, selectedNodeId, t]
   );
 
   // 鍵盤 Esc 關閉抽屜

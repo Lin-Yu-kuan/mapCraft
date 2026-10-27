@@ -25,12 +25,14 @@
     "progressLabel": "已完成 {{done}}/{{total}}（{{percent}}%）",
     "settingsAria": "開啟 BYOK 與供應商設定",
     "libraryAria": "返回地圖庫",
-    "themeToggleAria": "切換深淺色外觀"
+    "themeToggleAria": "切換深淺色外觀",
+    "themeLightTitle": "切換為淺色模式",
+    "themeDarkTitle": "切換為深色模式"
   },
   "home": {
     "heroTitle": "把任何主題，變成一張走得完的學習地圖",
     "heroSubtitle": "輸入你想掌握的領域或技能，AI 為你規劃結構化學習路徑，逐點深入、隨時驗證進度。",
-    "topicInputPlaceholder": "例如：Spring Boot 內部系統開發、零信任安全架構、Rust 所有權...",
+    "topicInputPlaceholder": "例如：Spring Boot 架構、零信任安全、Rust 所有權...",
     "startCraft": "開始規劃地圖",
     "sampleTopicsTitle": "或者從這些熱門主題開始探索：",
     "sampleTopics": [
@@ -38,7 +40,13 @@
       "零信任安全架構",
       "Rust 所有權與生命週期",
       "分散式系統共識演算法"
-    ]
+    ],
+    "quickDemo": "✨ 不想打字？點此直接試玩 TypeScript 精選示範地圖 →",
+    "stepHierarchy": "拆解知識樹狀階層",
+    "stepDependencies": "推導學習先後依賴",
+    "unitLevels": "層",
+    "unitItems": "個",
+    "unitNodes": "節點"
   },
   "library": {
     "title": "Your crafts（地圖庫）",
@@ -55,8 +63,10 @@
     "deleteMapAria": "刪除地圖",
     "exportBackup": "匯出備份",
     "importBackup": "匯入備份",
+    "demoMapButton": "示範地圖",
     "loadDemo": "✨ 載入精選示範地圖（免金鑰立刻試玩）",
     "demoLoaded": "已為您載入 TypeScript 核心架構示範地圖！",
+    "enterMap": "進入地圖",
     "importSuccess": "成功匯入 {{maps}} 張地圖、{{progress}} 筆進度與 {{lessons}} 份教材！",
     "importFailed": "匯入失敗："
   },
@@ -89,6 +99,8 @@
     "aiDisclaimer": "AI 生成 · {{model}} · {{timestamp}} · 請自行查證",
     "notGeneratedTitle": "尚未生成內容",
     "notGeneratedDesc": "此節點尚未生成教學筆記。點擊下方按鈕，由 AI 針對主題與路徑上下文即時生成。",
+    "nodeSummaryTitle": "🎯 本知識點綱要：",
+    "resizeHandleTitle": "按住向左/右拖曳調整面板大小",
     "generateLesson": "✨ 生成學習筆記",
     "generateBrainstorm": "💡 進行腦力激盪發想",
     "brainstormTitle": "腦力激盪",
@@ -104,6 +116,7 @@
     "baseUrlLabel": "端點 URL（Base URL）",
     "apiKeyLabel": "API 金鑰",
     "apiKeyPlaceholder": "請貼上您的 API 金鑰（自動去除首尾空格）",
+    "getKey": "取得 {{name}} 金鑰",
     "storageModeLabel": "金鑰儲存模式",
     "storageModeLocal": "本機永久儲存（localStorage，關閉瀏覽器仍保留）",
     "storageModeSession": "單次工作階段（sessionStorage，關閉瀏覽器即清除）",
@@ -132,7 +145,19 @@
     "clearLessonsSuccess": "已成功清空 AI 筆記暫存！",
     "clearAllData": "重設所有本機資料",
     "clearAllConfirm": "警告：此操作將徹底清空本機的所有地圖、進度、教材快取與 API 金鑰設定，且無法復原。確定要重置嗎？",
-    "clearAllSuccess": "所有本機資料已重設為初始狀態。"
+    "clearAllSuccess": "所有本機資料已重設為初始狀態。",
+    "webgpuTitle": "純前端 WebGPU 本機運行模式",
+    "webgpuSupported": "已偵測支援 WebGPU",
+    "webgpuNotSupported": "瀏覽器未啟用 WebGPU",
+    "webgpuDesc": "完全不需要任何 API 金鑰，所有 AI 運算皆在您的瀏覽器端本機完成。初次使用會自動下載模型權重並永久快取於本機 CacheStorage，後續即可離線極速運算！",
+    "webgpuModelSuggestions": "💡 建議模型選擇：",
+    "webgpuModel3B": "✦ Qwen 2.5 3B（預設推薦）：",
+    "webgpuModel3BDesc": "約 2.3GB，回答品質極高、教學架構最完整",
+    "webgpuModel15B": "✦ Qwen 2.5 1.5B（輕量版）：",
+    "webgpuModel15BDesc": "約 1.1GB，初次下載極快，適合輕裝體驗",
+    "webgpuPreload": "預先下載 / 驗證 WebGPU 模型",
+    "webgpuPreloading": "正在下載 / 初始化模型中...",
+    "webgpuReady": "🎉 WebGPU 模型載入完成！您現在可以免金鑰順暢使用 MapCraft。"
   },
   "generation": {
     "levelLabel": "目前熟悉程度",
@@ -185,13 +210,23 @@
     "continueGenerate": "仍然繼續生成",
     "cancelGenerate": "返回先看前置",
     "addSubtreeTitle": "為「{{label}}」新增子分支",
+    "addSubtreeSubtitle": "為「{{label}}」擴充更多下層延伸分支",
     "aiGenerateTab": "🤖 AI 即時延伸",
     "manualInputTab": "✍️ 手動輸入節點",
     "branchDepth": "生成深度",
     "branchBreadth": "分支廣度（節點數）",
     "branchMode": "生成模式",
-    "modeLearning": "學習模式（架構掌握）",
-    "modeBrainstorm": "腦力激盪模式（創意發想）",
+    "modeLearning": "學習模式",
+    "modeLearningDesc": "掌握架構與知識點",
+    "modeBrainstorm": "腦力激盪模式",
+    "modeBrainstormDesc": "發想主題點子與應用",
+    "depthUnit": "層",
+    "depthDefaultDesc": "預設 1 層（直接子節點）",
+    "breadthUnit": "個",
+    "breadthDefaultDesc": "預設 3 個平行分支",
+    "generateBranchesBtn": "產生 {{count}} 個子分支",
+    "missingKeySubtree": "尚未填寫 API 金鑰，請先至設定頁面設定金鑰後再生成。",
+    "emptyChildrenError": "AI 未回傳任何子分支，請放寬條件重試。",
     "manualLabel": "節點名稱",
     "manualLabelPlaceholder": "例如：容器網路隔離機制",
     "manualSummary": "一句話綱要",
@@ -199,6 +234,21 @@
     "manualDifficulty": "學習難度",
     "confirmAdd": "確認新增",
     "generatingSubtree": "AI 正在即時生成子分支...",
-    "subtreeGenerateSuccess": "已成功新增子分支！"
+    "subtreeGenerateSuccess": "已成功新增子分支！",
+    "exportBackupShort": "備份",
+    "deleteNodeConfirmSubtree": "⚠️ 確定要移除節點「{{label}}」嗎？\n\n這將會【連帶刪除其底下的 {{count}} 個子節點】以及相關的學習進度與筆記，此操作無法復原！",
+    "deleteNodeConfirmSingle": "確定要移除節點「{{label}}」嗎？\n\n相關的學習進度與筆記也將一併移除。"
+  },
+  "nodeCard": {
+    "difficultyBeginner": "入門",
+    "difficultyIntermediate": "進階",
+    "difficultyAdvanced": "精通",
+    "addChildAria": "為此節點新增分支",
+    "deleteAria": "移除此節點及其子分支",
+    "statusDone": "已完成",
+    "statusTodo": "未完成",
+    "brainstormBadge": "發想",
+    "expandAria": "展開 {{count}} 個子節點",
+    "collapseAria": "收合子節點"
   }
 }

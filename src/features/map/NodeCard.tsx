@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { CheckCircle2, Circle, ChevronRight, ChevronDown, Plus, Lightbulb, Trash2 } from 'lucide-react';
 import type { LayoutNodeData } from '@/domain/layout';
@@ -17,22 +18,15 @@ export interface NodeCardCustomData extends LayoutNodeData {
 
 export type MapCustomNode = Node<NodeCardCustomData, 'mapNode'>;
 
-const DIFFICULTY_CONFIG = {
-  beginner: {
-    label: '入門',
-    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-  },
-  intermediate: {
-    label: '進階',
-    badge: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
-  },
-  advanced: {
-    label: '精通',
-    badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
-  },
+const DIFFICULTY_BADGES = {
+  beginner: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+  intermediate: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
+  advanced: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
 };
 
 export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode>) {
+  const { t } = useTranslation();
+
   if (!data || !data.node) {
     return null;
   }
@@ -53,7 +47,13 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
   } = data;
 
   const difficulty = node.difficulty || 'beginner';
-  const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.beginner;
+  const badgeStyle = DIFFICULTY_BADGES[difficulty] || DIFFICULTY_BADGES.beginner;
+  const difficultyLabel =
+    difficulty === 'intermediate'
+      ? t('nodeCard.difficultyIntermediate')
+      : difficulty === 'advanced'
+        ? t('nodeCard.difficultyAdvanced')
+        : t('nodeCard.difficultyBeginner');
 
   const handleCardClick = () => {
     onSelectNode?.(node.id);
@@ -90,8 +90,8 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           e.stopPropagation();
           onAddChild?.(node.id);
         }}
-        title="為此節點新增分支"
-        aria-label="為此節點新增分支"
+        title={t('nodeCard.addChildAria')}
+        aria-label={t('nodeCard.addChildAria')}
         className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 shadow-sm transition-all hover:scale-110 hover:bg-emerald-50 opacity-0 group-hover:opacity-100 focus:opacity-100 dark:border-emerald-600 dark:bg-slate-900 dark:text-emerald-400 dark:hover:bg-slate-800"
       >
         <Plus className="h-3.5 w-3.5" />
@@ -127,9 +127,9 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
         {!isRoot && (
           <div className="flex items-center gap-1 shrink-0">
             {status === 'done' ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label="已完成" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label={t('nodeCard.statusDone')} />
             ) : (
-              <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label="未完成" />
+              <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label={t('nodeCard.statusTodo')} />
             )}
             <button
               type="button"
@@ -137,8 +137,8 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
                 e.stopPropagation();
                 onDeleteNode?.(node.id);
               }}
-              title="移除此節點及其子分支"
-              aria-label="移除此節點及其子分支"
+              title={t('nodeCard.deleteAria')}
+              aria-label={t('nodeCard.deleteAria')}
               className="flex h-5 w-5 items-center justify-center rounded-md text-slate-300 hover:bg-rose-50 hover:text-rose-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all dark:text-slate-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400"
             >
               <Trash2 className="h-3 w-3" />
@@ -156,14 +156,14 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-1.5">
           <span
-            className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${diffConfig.badge}`}
+            className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${badgeStyle}`}
           >
-            {diffConfig.label}
+            {difficultyLabel}
           </span>
           {node.mode === 'brainstorm' && (
             <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-200 bg-amber-50 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
               <Lightbulb className="h-2.5 w-2.5" />
-              <span>發想</span>
+              <span>{t('nodeCard.brainstormBadge')}</span>
             </span>
           )}
         </div>
@@ -173,7 +173,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           <button
             type="button"
             onClick={handleCollapseClick}
-            aria-label={isCollapsed ? `展開 ${childrenCount} 個子節點` : '收合子節點'}
+            aria-label={isCollapsed ? t('nodeCard.expandAria', { count: childrenCount }) : t('nodeCard.collapseAria')}
             className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <span>{childrenCount}</span>

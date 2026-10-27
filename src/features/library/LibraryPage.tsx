@@ -243,7 +243,7 @@ export function LibraryPage() {
             className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-2xs hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
           >
             <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span>示範地圖</span>
+            <span>{t('library.demoMapButton')}</span>
           </button>
 
           <Link
@@ -440,7 +440,7 @@ export function LibraryPage() {
                       {new Date(item.map.updatedAt).toLocaleDateString()}
                     </span>
                     <span className="inline-flex items-center gap-0.5 text-emerald-600 font-medium group-hover:translate-x-0.5 transition-transform dark:text-emerald-400">
-                      進入地圖 <ArrowRight className="h-3 w-3" />
+                      {t('library.enterMap')} <ArrowRight className="h-3 w-3" />
                     </span>
                   </div>
                 </div>
