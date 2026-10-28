@@ -1,42 +1,19 @@
 import type { PromptRequest } from '../types';
 
-export const LESSON_PROMPT_VERSION = 'lesson.zh-TW.v1';
+export const LESSON_PROMPT_VERSION = 'lesson.zh-TW.v2';
 
 export const LESSON_JSON_SCHEMA = {
   type: 'object',
   properties: {
-    concept: {
+    markdown: {
       type: 'string',
-      description: '白話解釋（150-400字），先一句話定義，再說明運作原理與使用時機',
-    },
-    why: {
-      type: 'string',
-      description: '1-3句說明解決了什麼問題、不學會遇到什麼麻煩',
-    },
-    example: {
-      type: 'object',
-      properties: {
-        scenario: { type: 'string', description: '貼近實務的應用情境' },
-        code: { type: 'string', description: '程式碼範例（純文字，不含 markdown 圍欄）' },
-        language: { type: 'string', description: '程式語言名稱（例 typescript, python）' },
-        explain: { type: 'string', description: '這段範例的執行重點' },
-      },
-      required: ['scenario', 'explain'],
-    },
-    pitfalls: {
-      type: 'array',
-      items: { type: 'string' },
-      description: '2-4條新手最常搞錯的誤區（每條一句話）',
-    },
-    keyPoints: {
-      type: 'array',
-      items: { type: 'string' },
-      description: '3-5條可背誦的精華重點',
+      description:
+        '引導式學習筆記正文（Markdown 格式）。請依知識點性質自由編排最適合的教學結構，靈活運用生活化例子、Markdown 比較表格、```diagram 圖解流程圖、引用提示與精簡範例。段落間必須以空行（\\n\\n）清楚分隔，嚴禁將所有文字擠在同一段。',
     },
     quiz: {
       type: 'object',
       properties: {
-        question: { type: 'string', description: '一題測驗是否真正理解的單選題' },
+        question: { type: 'string', description: '一題測驗是否真正理解的情境單選題' },
         options: {
           type: 'array',
           items: { type: 'string' },
@@ -48,7 +25,7 @@ export const LESSON_JSON_SCHEMA = {
       required: ['question', 'options', 'answerIndex', 'explanation'],
     },
   },
-  required: ['concept', 'why', 'pitfalls', 'keyPoints'],
+  required: ['markdown', 'quiz'],
 };
 
 export interface LessonPromptParams {
@@ -59,33 +36,42 @@ export interface LessonPromptParams {
   nodeSummary: string;
   goal?: string;
   siblingLabels?: string[];
+  childLabels?: string[];
 }
 
 export function buildLessonPrompt(params: LessonPromptParams): { system: string; user: string } {
-  const system = `你是使用繁體中文（台灣用語）的專業導師。你的任務是讓一個非專家在 3 分鐘內真正理解一個知識點。
+  const system = `你是使用繁體中文（台灣用語）的啟發式教學導師。你的任務是用最符合人類直覺的「引導式學習法」，帶領學習者輕鬆搞懂當前節點。
 你只輸出 JSON。不得出現簡體字。專有名詞第一次出現時附上英文原文。`;
 
   const goalText = params.goal ? `學習目標：${params.goal}\n` : '';
   const siblingsText =
     params.siblingLabels && params.siblingLabels.length > 0
-      ? `同層其他主題包含：${params.siblingLabels.join('、')}。（請專注於本節點，避免詳細解釋同層其他節點的範疇）\n`
+      ? `同層其他節點：${params.siblingLabels.join('、')}（請專注於本節點，不要越界詳述同層其他節點的內容）\n`
+      : '';
+  const childrenText =
+    params.childLabels && params.childLabels.length > 0
+      ? `本節點底下的子節點：${params.childLabels.join('、')}（⚠️ 防劇透重要規則：本節點是上層導覽，請只建立高層次直覺與全貌，絕對不要提前深入解釋上述子節點的專有名詞或底層細節，把細節留給子節點！）\n`
       : '';
 
   const user = `學習主題：${params.mapTitle}
 ${goalText}所在路徑：${params.pathLabels}
 學習者程度：${params.level}
-知識點：${params.nodeLabel}
-知識點摘要：${params.nodeSummary}
-${siblingsText}
-請產出以下欄位（皆為繁體中文）：
-- concept：150–400 字白話解釋。先用一句話定義，再說明運作原理，最後說明「什麼時候會用到」。
-- why：1–3 句，說明它解決了什麼問題、不學它會遇到什麼麻煩。
-- example：一個貼近實務的情境；若有程式碼，code 放程式碼（不含 markdown 圍欄），language 填語言名稱；explain 說明這段範例的重點。
-- pitfalls：2–4 條新手最常搞錯的地方（每條一句話，具體、不要空泛）。
-- keyPoints：3–5 條可背誦的重點。
-- quiz：一題四選一的單選題，測「是否真的理解」而非背誦；answerIndex 為正解索引（0–3）；explanation 說明為何其他選項錯。
+當前節點：${params.nodeLabel}
+節點目標：${params.nodeSummary}
+${siblingsText}${childrenText}
+請產出 JSON，包含兩個必填欄位：
+1. \`markdown\`：以 AI 認為最適合該知識點的「引導式教學」自由發揮（不限死板欄位，不要寫成八股填空）。
+   - 【循序漸進、拒絕硬塞專有名詞】：先從學習者懂的日常直覺或痛點切入，不要在第一段就塞滿後面才會學到的專有名詞。
+   - 【強制分段與排版呼吸感】：每段最多 2～4 句話，段落與段落之間**必須空行（\\n\\n）**，絕不可把大段文字擠在一起！善用 \`##\` / \`###\` 自訂最適合的小標題與 **粗體** 重點。
+   - 【多元視覺化解釋工具箱】（請依主題特性自由挑選最適合的 2～3 種呈現方式）：
+     • 🍎 **生活化比喻**：用日常場景把抽象概念具象化。
+     • 📊 **Markdown 表格**：比較新舊做法、優缺點或易混淆觀念時，畫出 \`| 欄位 | 說明 |\` 表格。
+     • 🗺️ **結構圖／流程圖**：解釋運作流程、架構或步驟時，請使用 \`\`\`diagram 圍欄畫出清晰的 ASCII / 方塊箭頭圖（例如 \`[前端] ──請求──> [API] ──查詢──> [DB]\`）。
+     • 💻 **實戰小範例**：若是語法或實作主題，給出精簡好懂的範例並點出關鍵。
+     • 💡 **微思考或避坑提示**：用 \`> 💡 ...\` 引用塊點出關鍵直覺或常見盲點。
+2. \`quiz\`：每個節點必備的一題四選一隨堂練習，測驗「是否真正理解觀念」而非死背；\`answerIndex\` 為正解索引（0–3）；\`explanation\` 說明正解原因與其他選項為何不對。
 
-限制：不要超過 1200 字；不要重複 concept 的內容到 keyPoints；不要提供需付費才能驗證的資訊。
+限制：\`markdown\` 長度約 300–900 字，重質不重量；不要提供需付費才能驗證的資訊。
 
 JSON Schema：
 ${JSON.stringify(LESSON_JSON_SCHEMA, null, 2)}`;
@@ -95,7 +81,7 @@ ${JSON.stringify(LESSON_JSON_SCHEMA, null, 2)}`;
 
 export function buildLessonRequest(
   params: LessonPromptParams,
-  temperature = 0.3,
+  temperature = 0.4,
   signal?: AbortSignal
 ): PromptRequest {
   const { system, user } = buildLessonPrompt(params);

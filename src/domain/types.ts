@@ -71,16 +71,20 @@ export interface Lesson {
 }
 
 export interface LessonContent {
-  concept: string; // Markdown 150–400 字
-  why: string;
+  /** 引導式自由教學筆記（Markdown 格式：支援分段、生活化比喻、表格、圖解、程式碼） */
+  markdown?: string;
+  /** 向下相容舊版（v1）五段式欄位 */
+  concept?: string;
+  why?: string;
   example?: {
     scenario: string;
     code?: string;
     language?: string;
     explain: string;
   };
-  pitfalls: string[];
-  keyPoints: string[];
+  pitfalls?: string[];
+  keyPoints?: string[];
+  /** 每個節點必備的隨堂測驗 */
   quiz?: Quiz;
 }
 

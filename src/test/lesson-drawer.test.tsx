@@ -52,7 +52,22 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
     updatedAt: Date.now(),
   };
 
-  const sampleLessonContent = {
+  const sampleGuidedLessonContent = {
+    markdown: `## 🍎 生活比喻：把環境變成食譜\n\nDockerfile 就像是一份「自動化主廚食譜」，把安裝環境的每一步寫成標準指令。\n\n| 指令 | 用途 |\n| --- | --- |\n| **FROM** | 指定基底映像檔 |\n\n\`\`\`diagram\n[Dockerfile] ──docker build──> [Docker Image]\n\`\`\``,
+    quiz: {
+      question: '為什麼在 Dockerfile 中通常建議指定明確的映像檔版本標籤（例如 node:20-alpine）？',
+      options: [
+        '因為沒有標籤無法建構',
+        '避免每次建構拉到不可預期的版本，確保環境一致與可重現性',
+        '為了節省磁碟空間',
+        '這是 Docker 官方強制語法',
+      ],
+      answerIndex: 1,
+      explanation: '使用具體版本能確保團隊成員與 CI/CD 環境在任何時間建構時具有完全相同的基礎執行環境。',
+    },
+  };
+
+  const sampleLegacyLessonContent = {
     concept: 'Dockerfile 是一個包含多行指令的純文字文件，Docker 守護行程透過逐行解析並建立每一層唯讀 Layer。',
     why: '解決了「在我電腦上能跑」的環境不一致問題，提供可重現、版本受控的容器映像檔。',
     example: {
@@ -115,7 +130,7 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
     );
   }
 
-  it('首次點選節點時顯示生成按鈕，點擊後呼叫 LLM API 並成功渲染六大分區內容', async () => {
+  it('首次點選節點時顯示生成按鈕，點擊後呼叫 LLM API 並成功渲染引導式自由教學（含表格、圖解）與隨堂測驗', async () => {
     let fetchCalled = false;
     globalThis.fetch = vi.fn().mockImplementation(async () => {
       fetchCalled = true;
@@ -123,7 +138,7 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          choices: [{ message: { content: JSON.stringify(sampleLessonContent) } }],
+          choices: [{ message: { content: JSON.stringify(sampleGuidedLessonContent) } }],
         }),
       };
     });
@@ -147,14 +162,12 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
       fireEvent.click(generateBtn);
     });
 
-    // 驗證六大分區
+    // 驗證引導式教學內容（小標題、表格、圖解）與隨堂測驗
     await waitFor(() => {
-      expect(screen.getByText('這是什麼')).toBeInTheDocument();
-      expect(screen.getByText(/Dockerfile 是一個包含多行指令的純文字文件/)).toBeInTheDocument();
-      expect(screen.getByText('為什麼重要 / 解決什麼問題')).toBeInTheDocument();
-      expect(screen.getByText('實戰範例')).toBeInTheDocument();
-      expect(screen.getByText('常見誤解與盲點')).toBeInTheDocument();
-      expect(screen.getByText('重點回顧')).toBeInTheDocument();
+      expect(screen.getByText(/生活比喻：把環境變成食譜/)).toBeInTheDocument();
+      expect(screen.getByText(/自動化主廚食譜/)).toBeInTheDocument();
+      expect(screen.getByText('指定基底映像檔')).toBeInTheDocument();
+      expect(screen.getByText('結構與流程圖解')).toBeInTheDocument();
       expect(screen.getByText('隨堂測驗')).toBeInTheDocument();
     });
 
@@ -166,15 +179,15 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
     expect(inDb?.promptVersion).toBe(LESSON_PROMPT_VERSION);
   });
 
-  it('快取命中（AC-04）：第二度點同節點時直出，不再發送網路請求', async () => {
-    // 預先寫入快取
+  it('快取命中（AC-04）與舊版 v1 向下相容：第二度點同節點時直出，不再發送網路請求', async () => {
+    // 預先寫入 v1 快取驗證向下相容
     const cachedLesson: Lesson = {
       mapId: mockMap.id,
       nodeId: '1',
       schemaVersion: 1,
       modelId: 'gpt-4o',
-      promptVersion: LESSON_PROMPT_VERSION,
-      content: sampleLessonContent,
+      promptVersion: 'lesson.zh-TW.v1',
+      content: sampleLegacyLessonContent,
       createdAt: Date.now() - 5000,
     };
     await lessonsRepo.save(cachedLesson);
@@ -202,7 +215,7 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
       schemaVersion: 1,
       modelId: 'gpt-4o',
       promptVersion: LESSON_PROMPT_VERSION,
-      content: sampleLessonContent,
+      content: sampleGuidedLessonContent,
       createdAt: Date.now(),
     };
     await lessonsRepo.save(cachedLesson);
@@ -233,7 +246,7 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
       schemaVersion: 1,
       modelId: 'gpt-4o',
       promptVersion: LESSON_PROMPT_VERSION,
-      content: sampleLessonContent,
+      content: sampleGuidedLessonContent,
       createdAt: Date.now(),
     };
     await lessonsRepo.save(cachedLesson);

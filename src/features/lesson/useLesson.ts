@@ -110,6 +110,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
         );
 
         const siblingLabels = getNodeSiblings(map.root, nodeId).siblings.map((s) => s.label);
+        const childLabels = (currentNode.children ?? []).map((c) => c.label);
 
         const promptParams = {
           mapTitle: map.title,
@@ -119,12 +120,13 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           nodeSummary: currentNode.summary,
           goal: map.options.goal,
           siblingLabels,
+          childLabels,
         };
 
         const req =
           targetMode === 'brainstorm'
             ? buildBrainstormRequest(promptParams, 0.7, controller.signal)
-            : buildLessonRequest(promptParams, 0.3, controller.signal);
+            : buildLessonRequest(promptParams, 0.4, controller.signal);
 
         let rawText = '';
         try {
@@ -289,6 +291,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           if (
             cached &&
             (cached.promptVersion === LESSON_PROMPT_VERSION ||
+              cached.promptVersion === 'lesson.zh-TW.v1' ||
               cached.promptVersion === BRAINSTORM_PROMPT_VERSION)
           ) {
             setLesson(cached);
@@ -330,6 +333,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           if (
             cached &&
             (cached.promptVersion === LESSON_PROMPT_VERSION ||
+              cached.promptVersion === 'lesson.zh-TW.v1' ||
               cached.promptVersion === BRAINSTORM_PROMPT_VERSION)
           ) {
             setLesson(cached);

@@ -402,39 +402,51 @@ export function generateMapHtml(
         \`;
       } else if (data.lesson && data.lesson.content) {
         const c = data.lesson.content;
-        contentHtml = \`
-          <div class="section-block">
-            <div class="section-title primary">📖 這是什麼</div>
-            <p style="font-size: 0.95rem; line-height: 1.7;">\${escapeHtml(c.concept)}</p>
-          </div>
-
-          <div class="section-block">
-            <div class="section-title amber">❓ 為什麼重要 / 解決什麼問題</div>
-            <p style="font-size: 0.95rem;">\${escapeHtml(c.why)}</p>
-          </div>
-
-          \${c.example ? \`
+        if (c.markdown) {
+          contentHtml = \`
             <div class="section-block">
-              <div class="section-title sky">🛠️ 實戰範例（\${escapeHtml(c.example.scenario)}）</div>
-              \${c.example.code ? \`<pre><code>\${escapeHtml(c.example.code)}</code></pre>\` : ''}
-              <p style="font-size: 0.85rem; color: var(--muted);">\${escapeHtml(c.example.explain)}</p>
+              <div style="font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap;">\${escapeHtml(c.markdown)}</div>
             </div>
-          \` : ''}
+          \`;
+        } else {
+          contentHtml = \`
+            \${c.concept ? \`
+              <div class="section-block">
+                <div class="section-title primary">📖 這是什麼</div>
+                <p style="font-size: 0.95rem; line-height: 1.7;">\${escapeHtml(c.concept)}</p>
+              </div>
+            \` : ''}
 
-          \${c.pitfalls && c.pitfalls.length ? \`
-            <div class="section-block">
-              <div class="section-title rose">⚠️ 常見誤解與盲點</div>
-              \${c.pitfalls.map(p => \`<div class="list-item">• \${escapeHtml(p)}</div>\`).join('')}
-            </div>
-          \` : ''}
+            \${c.why ? \`
+              <div class="section-block">
+                <div class="section-title amber">❓ 為什麼重要 / 解決什麼問題</div>
+                <p style="font-size: 0.95rem;">\${escapeHtml(c.why)}</p>
+              </div>
+            \` : ''}
 
-          \${c.keyPoints && c.keyPoints.length ? \`
-            <div class="section-block">
-              <div class="section-title primary">🎯 重點回顧</div>
-              \${c.keyPoints.map(k => \`<div class="list-item">✓ \${escapeHtml(k)}</div>\`).join('')}
-            </div>
-          \` : ''}
-        \`;
+            \${c.example ? \`
+              <div class="section-block">
+                <div class="section-title sky">🛠️ 實戰範例（\${escapeHtml(c.example.scenario)}）</div>
+                \${c.example.code ? \`<pre><code>\${escapeHtml(c.example.code)}</code></pre>\` : ''}
+                <p style="font-size: 0.85rem; color: var(--muted);">\${escapeHtml(c.example.explain)}</p>
+              </div>
+            \` : ''}
+
+            \${c.pitfalls && c.pitfalls.length ? \`
+              <div class="section-block">
+                <div class="section-title rose">⚠️ 常見誤解與盲點</div>
+                \${c.pitfalls.map(p => \`<div class="list-item">• \${escapeHtml(p)}</div>\`).join('')}
+              </div>
+            \` : ''}
+
+            \${c.keyPoints && c.keyPoints.length ? \`
+              <div class="section-block">
+                <div class="section-title primary">🎯 重點回顧</div>
+                \${c.keyPoints.map(k => \`<div class="list-item">✓ \${escapeHtml(k)}</div>\`).join('')}
+              </div>
+            \` : ''}
+          \`;
+        }
       } else {
         contentHtml = \`
           <div class="section-block" style="text-align: center; padding: 40px 20px;">

@@ -45,23 +45,35 @@ export const QuizSchema = z.object({
 export type QuizData = z.infer<typeof QuizSchema>;
 
 /**
- * 節點教材內容 Schema（SPEC §5.4）
+ * 節點教材內容 Schema（支援 v2 引導式自由 Markdown 教學 + 向下相容 v1 結構，SPEC §5.4）
  */
-export const LessonContentSchema = z.object({
-  concept: z.string().min(30).max(1500),
-  why: z.string().min(5).max(400),
-  example: z
-    .object({
-      scenario: z.string(),
-      code: z.string().nullish().transform((v) => v ?? undefined),
-      language: z.string().nullish().transform((v) => v ?? undefined),
-      explain: z.string(),
-    })
-    .optional(),
-  pitfalls: z.array(z.string()).min(1).max(6),
-  keyPoints: z.array(z.string()).min(2).max(8),
-  quiz: QuizSchema.optional(),
-});
+export const LessonContentSchema = z
+  .object({
+    markdown: z.string().min(30).max(8000).optional(),
+    concept: z.string().min(10).max(3000).optional(),
+    why: z.string().min(2).max(1000).optional(),
+    example: z
+      .object({
+        scenario: z.string(),
+        code: z.string().nullish().transform((v) => v ?? undefined),
+        language: z.string().nullish().transform((v) => v ?? undefined),
+        explain: z.string(),
+      })
+      .optional(),
+    pitfalls: z.array(z.string()).max(8).optional(),
+    keyPoints: z.array(z.string()).max(8).optional(),
+    quiz: QuizSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(
+        (data.markdown && data.markdown.trim().length > 0) ||
+          (data.concept && data.concept.trim().length > 0)
+      ),
+    {
+      message: '教材內容必須包含 markdown（引導式筆記）或 concept（舊版概念說明）欄位',
+    }
+  );
 
 export type LessonContentData = z.infer<typeof LessonContentSchema>;
 

@@ -16,7 +16,7 @@ export function stripBOM(str: string): string {
 }
 
 /**
- * 抽取原始 AI 文字中的 JSON 區塊（剝除前後無關文字與 Markdown 圍欄）
+ * 抽取原始 AI 文字中的 JSON 區塊（剝除前後無關文字與外層 Markdown 圍欄）
  */
 export function extractJsonString(raw: string): string {
   if (!raw || typeof raw !== 'string') {
@@ -25,11 +25,28 @@ export function extractJsonString(raw: string): string {
 
   let text = stripBOM(raw.trim());
 
-  // 1. 匹配 Markdown ```json ... ``` 或 ``` ... ``` 圍欄
-  const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)(?:```|$)/i;
-  const match = codeBlockRegex.exec(text);
-  if (match && match[1]) {
-    text = match[1].trim();
+  // 1. 僅當外層由 Markdown ```json ... ``` 圍欄包裹（即 ``` 出現在第一個 { 或 [ 之前）時才剝除外層圍欄
+  // 使用貪婪匹配至最後一個 ```，避免 JSON 字串內部包含 ```diagram 或程式碼區塊時被誤截斷
+  const firstFence = text.indexOf('```');
+  const firstBraceBeforeFence = text.indexOf('{');
+  const firstBracketBeforeFence = text.indexOf('[');
+  const firstJsonStart =
+    firstBraceBeforeFence !== -1 && firstBracketBeforeFence !== -1
+      ? Math.min(firstBraceBeforeFence, firstBracketBeforeFence)
+      : Math.max(firstBraceBeforeFence, firstBracketBeforeFence);
+
+  if (firstFence !== -1 && (firstJsonStart === -1 || firstFence < firstJsonStart)) {
+    const outerFenceRegex = /```(?:json)?\s*([\s\S]*?)(?:```|$)/i;
+    const greedyFenceRegex = /```(?:json)?\s*([\s\S]*)```/i;
+    const greedyMatch = greedyFenceRegex.exec(text);
+    if (greedyMatch && greedyMatch[1]) {
+      text = greedyMatch[1].trim();
+    } else {
+      const match = outerFenceRegex.exec(text);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
   }
 
   // 2. 若仍夾帶前後雜訊，定位最外層的 { ... } 或 [ ... ]
@@ -157,24 +174,29 @@ export function parseAndValidateJson<T>(
   schema?: z.ZodType<T>
 ): T {
   const extracted = extractJsonString(raw);
-  const sanitized = sanitizeJsonString(extracted);
 
   let parsed: unknown;
 
-  // 首次直接嘗試解析
+  // 1. 首次直接嘗試解析原始抽取出的合法 JSON（避免字串內的全形標點或語法被誤替換）
   try {
-    parsed = JSON.parse(sanitized);
+    parsed = JSON.parse(extracted);
   } catch {
-    // 首次失敗，嘗試截斷修復
+    // 2. 若包含全形引號或尾隨逗號，執行清理後再解析
+    const sanitized = sanitizeJsonString(extracted);
     try {
-      const repaired = repairTruncatedJson(sanitized);
-      parsed = JSON.parse(repaired);
-    } catch (secondErr) {
-      throw new Error(
-        `JSON 解析失敗（修復後仍無法通過）：${
-          secondErr instanceof Error ? secondErr.message : String(secondErr)
-        }`
-      );
+      parsed = JSON.parse(sanitized);
+    } catch {
+      // 3. 若仍失敗，嘗試截斷修復
+      try {
+        const repaired = repairTruncatedJson(sanitized);
+        parsed = JSON.parse(repaired);
+      } catch (secondErr) {
+        throw new Error(
+          `JSON 解析失敗（修復後仍無法通過）：${
+            secondErr instanceof Error ? secondErr.message : String(secondErr)
+          }`
+        );
+      }
     }
   }
 

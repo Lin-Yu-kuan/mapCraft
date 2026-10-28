@@ -112,14 +112,32 @@ Hope this helps your learning!
       ).toThrowError(/expected array to have >=3 items/i);
     });
 
-    it('validates lesson fixture with LessonContentSchema', () => {
+    it('validates lesson fixture with LessonContentSchema (v1 backward compatibility)', () => {
       const parsed = parseAndValidateJson(
         JSON.stringify(lessonFixture),
         LessonContentSchema
       );
       expect(parsed.concept).toContain('依賴注入');
-      expect(parsed.pitfalls.length).toBe(2);
+      expect(parsed.pitfalls?.length).toBe(2);
       expect(parsed.quiz?.options.length).toBe(4);
+      expect(parsed.quiz?.answerIndex).toBe(0);
+    });
+
+    it('validates v2 guided markdown lesson with LessonContentSchema', () => {
+      const v2Lesson = {
+        markdown: '## 🍎 生活化比喻\n\n想像你在寄快遞，Docker 容器就像是標準化的貨櫃。\n\n| 項目 | 說明 |\n| --- | --- |\n| 隔離性 | 輕量程序隔離 |',
+        quiz: {
+          question: '為什麼容器比虛擬機更輕量？',
+          options: ['共用宿主機 OS 核心', '不需要記憶體', '不支援網路', '只能跑單一檔案'],
+          answerIndex: 0,
+          explanation: '容器直接共用宿主機的作業系統核心，省去完整 Guest OS 的開銷。',
+        },
+      };
+      const parsed = parseAndValidateJson(
+        JSON.stringify(v2Lesson),
+        LessonContentSchema
+      );
+      expect(parsed.markdown).toContain('標準化的貨櫃');
       expect(parsed.quiz?.answerIndex).toBe(0);
     });
 

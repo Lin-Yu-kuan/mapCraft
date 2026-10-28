@@ -125,35 +125,49 @@ export const DEMO_LESSONS: Lesson[] = [
     nodeId: '0',
     schemaVersion: 1,
     modelId: 'demo-preloaded',
-    promptVersion: 'lesson.zh-TW.v1',
+    promptVersion: 'lesson.zh-TW.v2',
     mode: 'learning',
     createdAt: Date.now() - 3600000,
     content: {
-      concept:
-        'TypeScript 是由微軟開發的開放原始碼程式語言，它是 JavaScript 的超集（Superset），在現有的 JS 語法上擴充了「靜態型別系統」與「型別推斷能力」。所有合法的 JavaScript 程式碼都是合法的 TypeScript 程式碼，但 TypeScript 能在編譯期（Compile-time）抓出 80% 以上常見的執行階段錯誤（如 undefined is not a function）。',
-      why: 'JavaScript 本身是弱型別動態語言，變數可以在執行時期隨意改變型別。這在小型個人專案雖然靈活，但在大型跨團隊專案中，非常容易因為打錯字、物件結構變更、缺少防呆驗證而引發線上系統當機。TypeScript 讓編輯器（如 VS Code）獲得無比強大的自動補全、安全重構與語意導航能力，大幅降低溝通成本。',
-      example: {
-        scenario: '定義使用者資料介面並限制函數參數型別',
-        code: `// 定義使用者的資料規格契約（Interface）\ninterface User {\n  id: string;\n  name: string;\n  email?: string;\n  role: 'admin' | 'member';\n}\n\nfunction greetUser(user: User): string {\n  return \`歡迎回來，\${user.name} (\${user.role})\`;\n}\n\n// 靜態編譯期即可防範屬性遺漏或拼寫錯誤\ngreetUser({ id: '1', name: 'Alex', role: 'admin' });`,
-        language: 'typescript',
-        explain:
-          '透過宣告 User 介面，函數參數便受到嚴格保護；一旦傳入不存在的屬性或錯誤的角色字串，編譯器立刻劃紅線提示。',
-      },
-      pitfalls: [
-        '誤以為 TypeScript 會增加瀏覽器執行時期的效能開銷：其實 TypeScript 在打包時所有型別資訊都會被完全剝除（Type Erasure），產出純淨 JavaScript，因此執行期零效能損耗。',
-        '過度使用 any：濫用 any 會直接關閉編譯器的型別檢查防護網，使 TypeScript 退化成普通的 JavaScript。應優先考慮 unknown 或自訂泛型。',
-      ],
-      keyPoints: [
-        'TypeScript 是 JavaScript 的語法超集，只在編譯期進行靜態檢查。',
-        '型別抹除（Type Erasure）特性確保編譯產物是純粹高效的 JS。',
-        '型別即文件，能為大型團隊協作與 IDE 智慧感知提供堅實基礎。',
-      ],
+      markdown: `## 🍎 先用一個生活比喻來理解
+
+想像你在組裝一套大型樂高模型。
+
+如果沒有說明書與卡榫防呆設計（就像傳統的 **JavaScript**），你把零件插錯位置時當下完全不會發現，直到整台車組好、通電開動的那一刻，車輪才當場飛出去。
+
+**TypeScript** 就像是在你的工作桌上裝了一台「即時雷射掃描儀」——當你拿起零件準備拼上去的那一秒，它就會立刻提醒你：「這個卡榫尺寸不合喔！」讓你在動手執行前就把問題修好。
+
+## 🗺️ TypeScript 是怎麼運作的？
+
+很多人第一次接觸時會擔心：「瀏覽器又看不懂 TypeScript，這樣網頁怎麼跑？」
+
+其實 TypeScript 只在「開發與打包階段」幫你把關，最終放到瀏覽器上跑的依然是純粹的 JavaScript：
+
+\`\`\`diagram
+[你寫的 .ts 程式碼]
+       │
+       ▼  1. 靜態型別檢查（抓出打錯字、型別不合）
+[TypeScript 編譯器]
+       │
+       ▼  2. 型別抹除（Type Erasure：剝除所有型別標記）
+[純淨的 .js 程式碼] ──> 交給瀏覽器或 Node.js 高速執行（零額外效能開銷）
+\`\`\`
+
+## 📊 JavaScript vs TypeScript 一眼看懂
+
+| 比較項目 | JavaScript (JS) | TypeScript (TS) |
+| :--- | :--- | :--- |
+| **發現錯誤的時機** | 程式跑到那一行才爆炸（執行期） | 寫程式當下編輯器立刻劃紅線（編譯期） |
+| **團隊協作體驗** | 要去翻別人的程式碼才知道參數長怎樣 | 滑鼠移過去就有完整結構提示與自動補全 |
+| **執行時期速度** | 原生速度 | **一模一樣**（因為編譯後型別全被抹除了） |
+
+> 💡 **接下來的學習路線**：在這張地圖中，我們會先從「型別系統基石」認識基本防呆工具，再進入「泛型」學習如何寫出靈活又不失安全性的程式碼。`,
       quiz: {
         question:
           '關於 TypeScript 的「型別抹除（Type Erasure）」特性，下列敘述何者正確？',
         options: [
           'TypeScript 的型別資訊在瀏覽器執行時仍會佔用記憶體空間',
-          '編譯成 JavaScript 後，所有 interface 與型別宣告都會被移除，執行期零額外開銷',
+          '編譯成 JavaScript 後，所有型別宣告都會被移除，執行期零額外開銷',
           '型別抹除代表 TypeScript 無法在編譯期檢查出錯誤',
           '必須在生產環境伺服器上安裝 TypeScript 直譯器才能執行程式碼',
         ],
@@ -168,27 +182,51 @@ export const DEMO_LESSONS: Lesson[] = [
     nodeId: '1.1',
     schemaVersion: 1,
     modelId: 'demo-preloaded',
-    promptVersion: 'lesson.zh-TW.v1',
+    promptVersion: 'lesson.zh-TW.v2',
     mode: 'learning',
     createdAt: Date.now() - 3600000,
     content: {
-      concept:
-        '型別收窄（Type Narrowing）是指 TypeScript 根據程式碼中的條件分支判斷（例如 if、switch、typeof、instanceof），在特定的程式碼區塊內將原本寬鬆的型別（如 string | number）自動推論並精確縮小為更具體的型別。',
-      why: '當處理 API 回傳資料或不同格式的輸入參數時，我們經常使用聯合型別（Union Types）。若沒有型別收窄，TypeScript 會限制你只能存取所有聯合成員的「交集屬性」；透過收窄，可以在確認型別後放心呼叫該型別專屬的方法（例如字串的 toUpperCase 或陣列的 map）。',
-      example: {
-        scenario: '透過 typeof 守門員區分字串與數字',
-        code: `function formatInput(value: string | number): string {\n  // 透過 typeof 進行型別收窄\n  if (typeof value === 'string') {\n    return value.trim().toUpperCase(); // 此區塊內 value 確定為 string\n  }\n  return value.toFixed(2); // 此區塊內 value 確定為 number\n}`,
-        language: 'typescript',
-        explain:
-          '在 typeof value === "string" 的判斷分支下，TypeScript 智慧收窄型別，因此可以安全存取 .trim() 與 .toUpperCase()。',
-      },
-      pitfalls: [
-        '誤以為 typeof null 會回傳 "null"：在 JavaScript 歷史設計中，typeof null 會回傳 "object"，進行物件收窄時必須額外加入 value !== null 檢查。',
-      ],
-      keyPoints: [
-        'Type Narrowing 讓聯合型別在各條件分支中獲得安全且精確的型別推導。',
-        '常見收窄守門員包括 typeof、instanceof、in 關鍵字以及自訂 is 型別謂詞（Type Predicate）。',
-      ],
+      markdown: `## 🔍 為什麼需要「型別收窄（Type Narrowing）」？
+
+在寫程式時，一個變數剛進來時可能有多種可能性。例如一個搜尋框的輸入值 \`value\`，可能是「字串 \`string\`」也可能是「數字 \`number\`」。
+
+這就像海關人員收到一個貼著「易碎品或液體」的包裹——在打開確認它是哪一種之前，你不敢隨便把它倒過來放。
+
+**型別收窄**就是透過簡單的條件檢查（像過 X 光機），讓 TypeScript 確定：「在這個 \`if\` 區塊裡面，它 100% 是字串！」
+
+## 🗺️ 型別收窄的推理流程
+
+\`\`\`diagram
+變數 value: string | number（還不確定是哪一種）
+       │
+       ├── if (typeof value === 'string') ──> ✅ 收窄為 string（可安全呼叫 .toUpperCase()）
+       │
+       └── else                           ──> ✅ 自動收窄為 number（可安全呼叫 .toFixed()）
+\`\`\`
+
+## 💻 實戰範例：用 \`typeof\` 當守門員
+
+\`\`\`typescript
+function formatInput(value: string | number): string {
+  // 1. 經過 typeof 守門員檢查后，TS 確定這裡面一定是 string
+  if (typeof value === 'string') {
+    return value.trim().toUpperCase();
+  }
+
+  // 2. 排除 string 後，TS 自動推導這裡一定是 number
+  return value.toFixed(2);
+}
+\`\`\`
+
+## 📊 常見的 3 種收窄工具
+
+| 收窄方式 | 適用情境 | 範例 |
+| :--- | :--- | :--- |
+| **\`typeof\`** | 檢查基本型別（字串、數字、布林） | \`typeof x === "string"\` |
+| **\`instanceof\`** | 檢查是否為某個類別的實例 | \`err instanceof Error\` |
+| **真值檢查** | 排除 \`null\` 或 \`undefined\` | \`if (user) { ... }\` |
+
+> 💡 **新手最常踩的小陷阱**：在 JavaScript 的歷史設計中，\`typeof null\` 出來的結果竟然是 \`"object"\`！所以在檢查物件時，別忘了多加一個 \`value !== null\`。`,
       quiz: {
         question:
           '若有一個變數 x 的型別為 string | null，下列哪種判斷「無法」成功將 x 收窄為 string？',

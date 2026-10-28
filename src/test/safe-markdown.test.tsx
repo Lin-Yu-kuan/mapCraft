@@ -48,4 +48,26 @@ const greeting: string = "Hello MapCraft";
     expect(screen.getByText(/const greeting: string/)).toBeInTheDocument();
     expect(screen.getByLabelText('複製程式碼')).toBeInTheDocument();
   });
+
+  it('支援 Markdown 比較表格與結構圖解區塊渲染', () => {
+    const richMarkdown = `
+## 比較表格與圖解
+
+| 方式 | 優點 |
+| :--- | :--- |
+| **靜態檢查** | 編譯期抓錯 |
+
+\`\`\`diagram
+[前端] ──請求──> [API]
+\`\`\`
+    `;
+
+    const { container } = render(<SafeMarkdown content={richMarkdown} />);
+
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(screen.getByText('靜態檢查')).toBeInTheDocument();
+    expect(screen.getByText('編譯期抓錯')).toBeInTheDocument();
+    expect(screen.getByText('結構與流程圖解')).toBeInTheDocument();
+    expect(screen.getByText(/\[前端\] ──請求──> \[API\]/)).toBeInTheDocument();
+  });
 });

@@ -51,11 +51,19 @@ export function generateMapMarkdown(
       const lesson = lessonMap.get(node.id);
       if (lesson) {
         const { content } = lesson;
-        if (content.keyPoints && content.keyPoints.length > 0) {
-          lines.push(`${indent}  - 重點：${content.keyPoints.join(' ｜ ')}`);
-        }
-        if (content.pitfalls && content.pitfalls.length > 0) {
-          lines.push(`${indent}  - 常見誤解：${content.pitfalls.join(' ｜ ')}`);
+        if (content.markdown) {
+          const indentedMd = content.markdown
+            .split('\n')
+            .map((line) => `${indent}  > ${line}`)
+            .join('\n');
+          lines.push(indentedMd);
+        } else {
+          if (content.keyPoints && content.keyPoints.length > 0) {
+            lines.push(`${indent}  - 重點：${content.keyPoints.join(' ｜ ')}`);
+          }
+          if (content.pitfalls && content.pitfalls.length > 0) {
+            lines.push(`${indent}  - 常見誤解：${content.pitfalls.join(' ｜ ')}`);
+          }
         }
       }
 

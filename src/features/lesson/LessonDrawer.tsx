@@ -177,36 +177,43 @@ export function LessonDrawer({
       `> 所在路徑：${pathLabels}`,
       `> 難度：${currentNode.difficulty} ｜ 一句話摘要：${currentNode.summary}`,
       '',
-      `## 1. 這是什麼`,
-      content.concept,
-      '',
-      `## 2. 為什麼重要`,
-      content.why,
-      '',
     ];
 
-    if (content.example) {
-      mdLines.push(`## 3. 實戰範例`);
-      mdLines.push(`- 情境：${content.example.scenario}`);
-      if (content.example.code) {
-        mdLines.push(`\`\`\`${content.example.language || ''}`);
-        mdLines.push(content.example.code);
-        mdLines.push(`\`\`\``);
+    if (content.markdown) {
+      mdLines.push(content.markdown);
+      mdLines.push('');
+    } else {
+      if (content.concept) {
+        mdLines.push(`## 1. 這是什麼`);
+        mdLines.push(content.concept);
+        mdLines.push('');
       }
-      mdLines.push(`- 重點解析：${content.example.explain}`);
-      mdLines.push('');
-    }
-
-    if (content.pitfalls.length > 0) {
-      mdLines.push(`## 4. 常見誤解`);
-      content.pitfalls.forEach((p) => mdLines.push(`- ${p}`));
-      mdLines.push('');
-    }
-
-    if (content.keyPoints.length > 0) {
-      mdLines.push(`## 5. 重點回顧`);
-      content.keyPoints.forEach((k) => mdLines.push(`- ${k}`));
-      mdLines.push('');
+      if (content.why) {
+        mdLines.push(`## 2. 為什麼重要`);
+        mdLines.push(content.why);
+        mdLines.push('');
+      }
+      if (content.example) {
+        mdLines.push(`## 3. 實戰範例`);
+        mdLines.push(`- 情境：${content.example.scenario}`);
+        if (content.example.code) {
+          mdLines.push(`\`\`\`${content.example.language || ''}`);
+          mdLines.push(content.example.code);
+          mdLines.push(`\`\`\``);
+        }
+        mdLines.push(`- 重點解析：${content.example.explain}`);
+        mdLines.push('');
+      }
+      if (content.pitfalls && content.pitfalls.length > 0) {
+        mdLines.push(`## 4. 常見誤解`);
+        content.pitfalls.forEach((p) => mdLines.push(`- ${p}`));
+        mdLines.push('');
+      }
+      if (content.keyPoints && content.keyPoints.length > 0) {
+        mdLines.push(`## 5. 重點回顧`);
+        content.keyPoints.forEach((k) => mdLines.push(`- ${k}`));
+        mdLines.push('');
+      }
     }
 
     mdLines.push(`---`);
@@ -543,96 +550,107 @@ export function LessonDrawer({
             </section>
           </>
         ) : lesson ? (
-          /* 📚 六大分區渲染（Learning Mode） */
+          /* 📚 學習模式渲染（支援 v2 引導式自由教學 + 向下相容 v1 分區） */
           <>
-            {/* 1. 這是什麼 (Concept) */}
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                <BookOpen className="h-4 w-4" />
-                <span>{t('lesson.conceptTitle')}</span>
-              </div>
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-                <SafeMarkdown content={lesson.content.concept} />
-              </div>
-            </section>
-
-            {/* 2. 為什麼重要 (Why) */}
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                <HelpCircle className="h-4 w-4" />
-                <span>{t('lesson.whyTitle')}</span>
-              </div>
-              <p className="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                {lesson.content.why}
-              </p>
-            </section>
-
-            {/* 3. 實戰範例 (Example) */}
-            {lesson.content.example && (
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                  <FileText className="h-4 w-4" />
-                  <span>{t('lesson.exampleTitle')}</span>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-2">
-                    {lesson.content.example.scenario}
-                  </p>
-                  {lesson.content.example.code && (
-                    <SafeMarkdown
-                      content={`\`\`\`${lesson.content.example.language || ''}\n${lesson.content.example.code}\n\`\`\``}
-                    />
-                  )}
-                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                    {lesson.content.example.explain}
-                  </p>
+            {lesson.content.markdown ? (
+              /* v2 引導式自由排版教學主體 */
+              <section className="space-y-3">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900/60">
+                  <SafeMarkdown content={lesson.content.markdown} />
                 </div>
               </section>
-            )}
-
-            {/* 4. 常見誤解 (Pitfalls) */}
-            {lesson.content.pitfalls.length > 0 && (
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>{t('lesson.pitfallsTitle')}</span>
-                </div>
-                <div className="space-y-2">
-                  {lesson.content.pitfalls.map((pitfall, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2.5 rounded-xl border border-rose-100 bg-rose-50/50 p-3 text-xs text-rose-800 dark:border-rose-950 dark:bg-rose-950/30 dark:text-rose-300"
-                    >
-                      <span className="font-mono text-rose-500 font-bold">#{idx + 1}</span>
-                      <span className="leading-relaxed">{pitfall}</span>
+            ) : (
+              /* v1 向下相容舊版五段式分區 */
+              <>
+                {lesson.content.concept && (
+                  <section className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{t('lesson.conceptTitle')}</span>
                     </div>
-                  ))}
-                </div>
-              </section>
+                    <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                      <SafeMarkdown content={lesson.content.concept} />
+                    </div>
+                  </section>
+                )}
+
+                {lesson.content.why && (
+                  <section className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <HelpCircle className="h-4 w-4" />
+                      <span>{t('lesson.whyTitle')}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {lesson.content.why}
+                    </p>
+                  </section>
+                )}
+
+                {lesson.content.example && (
+                  <section className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                      <FileText className="h-4 w-4" />
+                      <span>{t('lesson.exampleTitle')}</span>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+                      <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-2">
+                        {lesson.content.example.scenario}
+                      </p>
+                      {lesson.content.example.code && (
+                        <SafeMarkdown
+                          content={`\`\`\`${lesson.content.example.language || ''}\n${lesson.content.example.code}\n\`\`\``}
+                        />
+                      )}
+                      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                        {lesson.content.example.explain}
+                      </p>
+                    </div>
+                  </section>
+                )}
+
+                {lesson.content.pitfalls && lesson.content.pitfalls.length > 0 && (
+                  <section className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>{t('lesson.pitfallsTitle')}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {lesson.content.pitfalls.map((pitfall, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2.5 rounded-xl border border-rose-100 bg-rose-50/50 p-3 text-xs text-rose-800 dark:border-rose-950 dark:bg-rose-950/30 dark:text-rose-300"
+                        >
+                          <span className="font-mono text-rose-500 font-bold">#{idx + 1}</span>
+                          <span className="leading-relaxed">{pitfall}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {lesson.content.keyPoints && lesson.content.keyPoints.length > 0 && (
+                  <section className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <Lightbulb className="h-4 w-4" />
+                      <span>{t('lesson.keyPointsTitle')}</span>
+                    </div>
+                    <ul className="space-y-1.5 pl-1">
+                      {lesson.content.keyPoints.map((point, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300"
+                        >
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                          <span className="leading-relaxed">{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </>
             )}
 
-            {/* 5. 重點回顧 (KeyPoints) */}
-            {lesson.content.keyPoints.length > 0 && (
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  <Lightbulb className="h-4 w-4" />
-                  <span>{t('lesson.keyPointsTitle')}</span>
-                </div>
-                <ul className="space-y-1.5 pl-1">
-                  {lesson.content.keyPoints.map((point, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                      <span className="leading-relaxed">{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* 6. 隨堂測驗 (Quiz) */}
+            {/* 隨堂測驗 (Quiz) — 每個節點固定保留 */}
             {lesson.content.quiz && (
               <section className="space-y-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-950/60 dark:bg-indigo-950/30">
                 <div className="flex items-center justify-between">
