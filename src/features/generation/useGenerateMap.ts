@@ -69,7 +69,7 @@ export function useGenerateMap(): UseGenerateMapResult {
         const meta = getProviderMeta(providerId);
 
         const apiKey = getStoredApiKey(providerId);
-        if (!apiKey && providerId !== 'ollama' && providerId !== 'webgpu') {
+        if (!apiKey && providerId !== 'ollama') {
           const err: NormalizedError = {
             code: 'UNAUTHORIZED',
             providerId,

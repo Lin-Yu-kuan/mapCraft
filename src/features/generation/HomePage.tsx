@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import type { Level, GenerationOptions } from '@/domain/types';
 import { loadDemoCraft } from '@/lib/db';
-import { addWebGPUProgressListener } from '@/lib/llm/webgpu';
 import { useGenerateMap } from './useGenerateMap';
 import { GenerationErrorPanel } from './GenerationErrorPanel';
 
@@ -34,19 +33,6 @@ export function HomePage() {
   const [maxBreadth, setMaxBreadth] = useState(5);
   const [maxNodes, setMaxNodes] = useState(30);
   const [temperature, setTemperature] = useState(0.4);
-
-  // WebGPU 本機模型下載進度
-  const [webGpuProgress, setWebGpuProgress] = useState<{ progress: number; text: string } | null>(null);
-
-  useEffect(() => {
-    const unsub = addWebGPUProgressListener((report) => {
-      setWebGpuProgress({
-        progress: Math.round(report.progress * 100),
-        text: report.text,
-      });
-    });
-    return unsub;
-  }, []);
 
   const {
     isGenerating,
@@ -141,22 +127,6 @@ export function HomePage() {
               </p>
             </div>
 
-            {/* WebGPU 專屬模型下載進度 */}
-            {webGpuProgress && (
-              <div className="mx-auto mt-4 max-w-sm rounded-xl border border-emerald-300 bg-white/90 p-3.5 text-left shadow-xs dark:border-emerald-800 dark:bg-slate-900/90 space-y-1.5">
-                <div className="flex justify-between text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                  <span className="truncate pr-2">{webGpuProgress.text}</span>
-                  <span>{webGpuProgress.progress}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950">
-                  <div
-                    className="h-full bg-emerald-600 transition-all duration-300 dark:bg-emerald-400"
-                    style={{ width: `${webGpuProgress.progress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* 骨架載入條 */}
             <div className="mx-auto mt-6 max-w-sm space-y-2.5">
               <div className="h-2.5 w-full rounded-full bg-emerald-200/70 overflow-hidden dark:bg-emerald-900/70">
@@ -171,10 +141,7 @@ export function HomePage() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => {
-                  setWebGpuProgress(null);
-                  cancel();
-                }}
+                onClick={cancel}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-semibold text-emerald-800 shadow-xs transition-all hover:bg-emerald-100/60 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
               >
                 <XCircle className="h-4 w-4" />

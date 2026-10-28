@@ -12,7 +12,6 @@ import {
   Database,
   Trash2,
   HardDrive,
-  Cpu,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -20,10 +19,6 @@ import {
   getProviderMeta,
   getDefaultModel,
   createProvider,
-  isWebGPUSupported,
-  isWebGPUModelCached,
-  addWebGPUProgressListener,
-  getErrorMessage,
 } from '@/lib/llm';
 import {
   getStorageMode,
@@ -57,12 +52,6 @@ export function SettingsPage() {
   } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [dataStats, setDataStats] = useState({ maps: 0, progress: 0, lessons: 0 });
-  const [webGpuProgress, setWebGpuProgress] = useState<{ progress: number; text: string } | null>(null);
-  const [isPreloadingGpu, setIsPreloadingGpu] = useState(false);
-  const [webGpuModelCache, setWebGpuModelCache] = useState<{
-    map: 'checking' | 'available' | 'missing' | 'error';
-    lesson: 'checking' | 'available' | 'missing' | 'error';
-  }>({ map: 'checking', lesson: 'checking' });
 
   // 動態模型拉取與自訂輸入狀態
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
@@ -76,40 +65,6 @@ export function SettingsPage() {
 
   const hideKeyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeMeta = getProviderMeta(providerId);
-  const hasWebGPUSupport = isWebGPUSupported();
-
-  useEffect(() => {
-    const unsub = addWebGPUProgressListener((report) => {
-      setWebGpuProgress({
-        progress: Math.round(report.progress * 100),
-        text: report.text,
-      });
-    });
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    if (providerId !== 'webgpu') return;
-
-    let active = true;
-    setWebGpuModelCache({ map: 'checking', lesson: 'checking' });
-
-    const checkCache = (model: string) =>
-      isWebGPUModelCached(model)
-        .then((available) => (available ? 'available' as const : 'missing' as const))
-        .catch(() => 'error' as const);
-
-    void Promise.all([
-      checkCache(mapModel || getDefaultModel('webgpu', 'map')),
-      checkCache(lessonModel || getDefaultModel('webgpu', 'lesson')),
-    ]).then(([map, lesson]) => {
-      if (active) setWebGpuModelCache({ map, lesson });
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [providerId, mapModel, lessonModel]);
 
   const refreshStats = async () => {
     try {
@@ -369,308 +324,121 @@ export function SettingsPage() {
             </select>
           </div>
 
-          {/* WebGPU 專屬說明與狀態面板 */}
-          {providerId === 'webgpu' ? (
-            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/40 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
-                  <Cpu className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-emerald-950 dark:text-emerald-200">
-                      {t('settings.webgpuTitle')}
-                    </h3>
-                    {hasWebGPUSupport ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {t('settings.webgpuSupported')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-800 dark:bg-rose-900/80 dark:text-rose-200">
-                        <AlertCircle className="h-3 w-3" />
-                        {t('settings.webgpuNotSupported')}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-                    {t('settings.webgpuDesc')}
-                  </p>
-                </div>
-              </div>
+          {/* Base URL */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
+              {t('settings.baseUrlLabel')}
+            </label>
+            <input
+              type="url"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={activeMeta?.defaultBaseUrl}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            />
+          </div>
 
-              <div className="rounded-lg border border-emerald-100 bg-white/80 p-3 text-xs text-slate-700 dark:border-emerald-900/40 dark:bg-slate-900/80 dark:text-slate-300">
-                <p>{t('settings.webgpuStorageLocation')}</p>
-                <p className="mt-2 flex items-center gap-1.5 font-medium">
-                  {webGpuModelCache.map === 'available' ? (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                      {t('settings.webgpuModelAvailable', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
-                    </>
-                  ) : webGpuModelCache.map === 'checking' ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {t('settings.webgpuCheckingCache', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
-                    </>
-                  ) : webGpuModelCache.map === 'error' ? (
-                    <>
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      {t('settings.webgpuCacheCheckFailed', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      {t('settings.webgpuModelNotAvailable', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
-                    </>
-                  )}
-                </p>
-                {lessonModel !== mapModel && (
-                  <p className="mt-1 flex items-center gap-1.5 font-medium">
-                    {webGpuModelCache.lesson === 'available' ? (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        {t('settings.webgpuModelAvailable', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
-                      </>
-                    ) : webGpuModelCache.lesson === 'checking' ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        {t('settings.webgpuCheckingCache', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
-                      </>
-                    ) : webGpuModelCache.lesson === 'error' ? (
-                      <>
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                        {t('settings.webgpuCacheCheckFailed', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                        {t('settings.webgpuModelNotAvailable', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
-                      </>
-                    )}
-                  </p>
-                )}
-              </div>
-
-              {/* 容量與版本建議 */}
-              <div className="rounded-lg bg-white/80 p-3 text-xs space-y-1.5 border border-emerald-100 dark:border-emerald-900/40 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300">
-                <div className="font-semibold text-slate-800 dark:text-slate-200">
-                  {t('settings.webgpuModelSuggestions')}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                    {t('settings.webgpuModel3B')}
-                  </span>
-                  <span>{t('settings.webgpuModel3BDesc')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
-                    {t('settings.webgpuModel15B')}
-                  </span>
-                  <span>{t('settings.webgpuModel15BDesc')}</span>
-                </div>
-                <div className="pt-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 border-t border-emerald-100/60 dark:border-emerald-900/40">
-                  {t('settings.webgpuActionNotice')}
-                </div>
-              </div>
-
-              {/* 下載進度條 */}
-              {webGpuProgress && (
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                    <span className="truncate pr-2">{webGpuProgress.text}</span>
-                    <span>{webGpuProgress.progress}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-200/60 dark:bg-emerald-900/60">
-                    <div
-                      className="h-full bg-emerald-600 transition-all duration-300 dark:bg-emerald-400"
-                      style={{ width: `${webGpuProgress.progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 手動預先載入按鈕 */}
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  disabled={
-                    !hasWebGPUSupport ||
-                    isPreloadingGpu ||
-                    webGpuModelCache.map === 'checking' ||
-                    webGpuModelCache.map === 'available'
-                  }
-                  onClick={async () => {
-                    setIsPreloadingGpu(true);
-                    try {
-                      const p = createProvider({
-                        id: 'webgpu',
-                        baseUrl: 'webgpu://local',
-                        model: mapModel || 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
-                      });
-                      if ('preload' in p && typeof (p as { preload?: () => Promise<void> }).preload === 'function') {
-                        await (p as { preload: () => Promise<void> }).preload();
-                      } else {
-                        await p.ping();
-                      }
-                      setWebGpuModelCache((cache) => ({ ...cache, map: 'available' }));
-                      alert(t('settings.webgpuReady'));
-                    } catch (err: unknown) {
-                      const message = getErrorMessage(err);
-                      alert(message || t('common.error'));
-                    } finally {
-                      setIsPreloadingGpu(false);
-                      void isWebGPUModelCached(mapModel || getDefaultModel('webgpu', 'map'))
-                        .then((available) => {
-                          setWebGpuModelCache((cache) => ({
-                            ...cache,
-                            map: available ? 'available' : 'missing',
-                          }));
-                        })
-                        .catch(() => {
-                          setWebGpuModelCache((cache) => ({ ...cache, map: 'error' }));
-                        });
-                    }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50 transition-all active:scale-95"
+          {/* API Key 輸入與遮罩 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t('settings.apiKeyLabel')}
+              </label>
+              {activeMeta?.docUrl && (
+                <a
+                  href={activeMeta.docUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-emerald-600 hover:underline dark:text-emerald-400 inline-flex items-center gap-1"
                 >
-                  {isPreloadingGpu ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>{t('settings.webgpuPreloading')}</span>
-                    </>
-                  ) : webGpuModelCache.map === 'available' ? (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>{t('settings.webgpuModelAvailableButton')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Cpu className="h-3.5 w-3.5" />
-                      <span>{t('settings.webgpuPreload')}</span>
-                    </>
-                  )}
-                </button>
-              </div>
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  {t('settings.getKey', { name: activeMeta.name })}
+                </a>
+              )}
             </div>
-          ) : (
-            <>
-              {/* Base URL */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                  {t('settings.baseUrlLabel')}
-                </label>
+            <div className="relative flex items-center">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value.trim())}
+                placeholder={t('settings.apiKeyPlaceholder')}
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-12 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={toggleShowKey}
+                className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label={
+                  showKey ? t('settings.hideKeyAria') : t('settings.showKeyAria')
+                }
+              >
+                {showKey ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 儲存模式切換（SPEC §2.2 FR-01） */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
+              {t('settings.storageModeLabel')}
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
                 <input
-                  type="url"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder={activeMeta?.defaultBaseUrl}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  type="radio"
+                  name="storageMode"
+                  value="local"
+                  checked={storageMode === 'local'}
+                  onChange={() => setStorageMode('local')}
+                  className="mt-1 text-emerald-600 focus:ring-emerald-500"
                 />
-              </div>
-
-              {/* API Key 輸入與遮罩 */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {t('settings.apiKeyLabel')}
-                  </label>
-                  {activeMeta?.docUrl && (
-                    <a
-                      href={activeMeta.docUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-emerald-600 hover:underline dark:text-emerald-400 inline-flex items-center gap-1"
-                    >
-                      <HelpCircle className="h-3.5 w-3.5" />
-                      {t('settings.getKey', { name: activeMeta.name })}
-                    </a>
-                  )}
+                <div className="text-xs">
+                  <span className="font-semibold text-slate-900 dark:text-white block">
+                    {t('settings.storageModeLocal')}
+                  </span>
                 </div>
-                <div className="relative flex items-center">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value.trim())}
-                    placeholder={t('settings.apiKeyPlaceholder')}
-                    className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-12 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleShowKey}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    aria-label={
-                      showKey ? t('settings.hideKeyAria') : t('settings.showKeyAria')
-                    }
-                  >
-                    {showKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
+                <input
+                  type="radio"
+                  name="storageMode"
+                  value="session"
+                  checked={storageMode === 'session'}
+                  onChange={() => setStorageMode('session')}
+                  className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="font-semibold text-slate-900 dark:text-white block">
+                    {t('settings.storageModeSession')}
+                  </span>
                 </div>
-              </div>
+              </label>
 
-              {/* 儲存模式切換（SPEC §2.2 FR-01） */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                  {t('settings.storageModeLabel')}
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="storageMode"
-                      value="local"
-                      checked={storageMode === 'local'}
-                      onChange={() => setStorageMode('local')}
-                      className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <span className="font-semibold text-slate-900 dark:text-white block">
-                        {t('settings.storageModeLocal')}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="storageMode"
-                      value="session"
-                      checked={storageMode === 'session'}
-                      onChange={() => setStorageMode('session')}
-                      className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <span className="font-semibold text-slate-900 dark:text-white block">
-                        {t('settings.storageModeSession')}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="storageMode"
-                      value="memory"
-                      checked={storageMode === 'memory'}
-                      onChange={() => setStorageMode('memory')}
-                      className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <span className="font-semibold text-slate-900 dark:text-white block">
-                        {t('settings.storageModeMemory')}
-                      </span>
-                    </div>
-                  </label>
+              <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 cursor-pointer">
+                <input
+                  type="radio"
+                  name="storageMode"
+                  value="memory"
+                  checked={storageMode === 'memory'}
+                  onChange={() => setStorageMode('memory')}
+                  className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="font-semibold text-slate-900 dark:text-white block">
+                    {t('settings.storageModeMemory')}
+                  </span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {t('settings.storageModeNotice')}
-                </p>
-              </div>
-            </>
-          )}
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.storageModeNotice')}
+            </p>
+          </div>
 
           {/* 模型角色指派（地圖規劃 vs 教材撰寫） */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-900 space-y-3">
@@ -684,17 +452,15 @@ export function SettingsPage() {
                 </p>
               </div>
 
-              {providerId !== 'webgpu' && (
-                <button
-                  type="button"
-                  onClick={handleFetchModels}
-                  disabled={isFetchingModels || (!apiKey.trim() && providerId !== 'ollama')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${isFetchingModels ? 'animate-spin' : ''}`} />
-                  {isFetchingModels ? t('settings.fetchingModels') : t('settings.fetchModels')}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleFetchModels}
+                disabled={isFetchingModels || (!apiKey.trim() && providerId !== 'ollama')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isFetchingModels ? 'animate-spin' : ''}`} />
+                {isFetchingModels ? t('settings.fetchingModels') : t('settings.fetchModels')}
+              </button>
             </div>
 
             {fetchModelsMsg && (

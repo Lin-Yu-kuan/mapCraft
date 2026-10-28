@@ -70,13 +70,13 @@ describe('normalizeError (SPEC §5.2)', () => {
   it('extracts user-facing messages from nested error objects instead of stringifying as [object Object]', () => {
     const nested = {
       error: {
-        messageForUser: 'WebGPU 模型下載失敗，請重試。',
+        messageForUser: '自訂端點連線失敗，請重試。',
       },
     };
 
-    const result = normalizeError(nested, 'webgpu');
+    const result = normalizeError(nested, 'custom');
     expect(result.code).toBe('UNKNOWN');
-    expect(result.messageForUser).toContain('WebGPU 模型下載失敗');
+    expect(result.messageForUser).toContain('自訂端點連線失敗');
     expect(result.messageForUser).not.toContain('[object Object]');
   });
 });

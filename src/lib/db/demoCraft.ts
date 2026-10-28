@@ -11,8 +11,8 @@ export const DEMO_MAP: LearningMap = {
   title: 'TypeScript 核心架構與實戰精粹',
   topic: 'TypeScript',
   summary: '掌握型別系統思維、泛型設計與實戰技巧',
-  providerId: 'webgpu',
-  modelId: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
+  providerId: 'openai',
+  modelId: 'gpt-4o-mini',
   createdAt: Date.now() - 3600000,
   updatedAt: Date.now(),
   options: {

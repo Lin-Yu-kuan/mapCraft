@@ -90,7 +90,7 @@ export function AddSubtreeModal({
       const meta = getProviderMeta(providerId);
       const apiKey = getStoredApiKey(providerId);
 
-      if (!apiKey && providerId !== 'ollama' && providerId !== 'webgpu') {
+      if (!apiKey && providerId !== 'ollama') {
         setError(t('map.missingKeySubtree'));
         setIsGenerating(false);
         return;

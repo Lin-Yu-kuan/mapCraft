@@ -8,7 +8,6 @@ import {
 
 describe('LLM Provider Registry (SPEC §5.2)', () => {
   const expectedProviderIds = [
-    'webgpu',
     'openai',
     'azure',
     'anthropic',
@@ -19,9 +18,9 @@ describe('LLM Provider Registry (SPEC §5.2)', () => {
     'custom',
   ];
 
-  it('contains all 9 required providers (including WebGPU)', () => {
+  it('contains all 8 required providers', () => {
     const all = getAllProviders();
-    expect(all.length).toBe(9);
+    expect(all.length).toBe(8);
 
     for (const id of expectedProviderIds) {
       expect(PROVIDER_REGISTRY[id]).toBeDefined();

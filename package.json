@@ -15,7 +15,6 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.86",
     "@xyflow/react": "^12.12.0",
     "d3-hierarchy": "^3.1.2",
     "dexie": "^4.4.7",

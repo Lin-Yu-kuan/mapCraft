@@ -25,7 +25,6 @@ import {
 import type { LearningMap, NodeStatus, NodeMode } from '@/domain/types';
 import { getNodeParent, getNodeSiblings } from '@/domain/tree';
 import { lessonsRepo } from '@/lib/db/repos/lessons';
-import { addWebGPUProgressListener } from '@/lib/llm/webgpu';
 import { SafeMarkdown } from '@/shared/components/SafeMarkdown';
 import { useLesson } from './useLesson';
 
@@ -68,19 +67,6 @@ export function LessonDrawer({
   // 軟性依賴提醒確認框
   const [showPrereqWarning, setShowPrereqWarning] = useState(false);
   const pendingGenerateRef = useRef<(() => void) | null>(null);
-
-  // WebGPU 本機模型下載進度
-  const [webGpuProgress, setWebGpuProgress] = useState<{ progress: number; text: string } | null>(null);
-
-  useEffect(() => {
-    const unsub = addWebGPUProgressListener((report) => {
-      setWebGpuProgress({
-        progress: Math.round(report.progress * 100),
-        text: report.text,
-      });
-    });
-    return unsub;
-  }, []);
 
   // 抽屜寬度可拖曳調整（預設 480px，範圍 380px ~ 900px）
   const [drawerWidth, setDrawerWidth] = useState<number>(() => {
@@ -386,21 +372,6 @@ export function LessonDrawer({
                 {t('lesson.generatingDesc')}
               </p>
             </div>
-            {/* WebGPU 模型下載進度 */}
-            {webGpuProgress && (
-              <div className="w-full max-w-xs space-y-1.5 rounded-xl border border-emerald-200 bg-white/90 p-3 text-left shadow-xs dark:border-emerald-800 dark:bg-slate-900/90">
-                <div className="flex justify-between text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                  <span className="truncate pr-2">{webGpuProgress.text}</span>
-                  <span>{webGpuProgress.progress}%</span>
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950">
-                  <div
-                    className="h-full bg-emerald-600 transition-all duration-300 dark:bg-emerald-400"
-                    style={{ width: `${webGpuProgress.progress}%` }}
-                  />
-                </div>
-              </div>
-            )}
             {isGenerating && (
               <button
                 type="button"

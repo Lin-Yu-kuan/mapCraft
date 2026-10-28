@@ -38,7 +38,7 @@ describe('SettingsPage (SPEC §2.2 FR-01 & AC-01)', () => {
     expect(screen.getByText('儲存設定')).toBeInTheDocument();
   });
 
-  it('explains where WebGPU models are stored when WebGPU is selected', async () => {
+  it('displays Ollama notice when Ollama provider is selected', async () => {
     await act(async () => {
       render(
         <Providers>
@@ -52,12 +52,12 @@ describe('SettingsPage (SPEC §2.2 FR-01 & AC-01)', () => {
 
     await act(async () => {
       fireEvent.change(providerSelect, {
-        target: { value: 'webgpu' },
+        target: { value: 'ollama' },
       });
     });
 
     expect(
-      await screen.findByText(/不會出現在 Windows「下載」資料夾/)
+      await screen.findByText(/OLLAMA_ORIGINS/)
     ).toBeInTheDocument();
   });
 

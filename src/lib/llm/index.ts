@@ -5,6 +5,5 @@ export * from './errors';
 export * from './openaiCompatible';
 export * from './anthropic';
 export * from './google';
-export * from './webgpu';
 export * from './factory';
 export * from './json';

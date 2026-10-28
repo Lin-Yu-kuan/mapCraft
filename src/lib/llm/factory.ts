@@ -3,19 +3,12 @@ import type { ProviderConfig } from '@/domain/types';
 import { OpenAICompatibleProvider } from './openaiCompatible';
 import { AnthropicProvider } from './anthropic';
 import { GoogleGeminiProvider } from './google';
-import { WebGPUProvider } from './webgpu';
 
 export function createProvider(
   config: ProviderConfig,
   apiKey?: string
 ): LLMProvider {
   const { id, baseUrl, model, headers, azure } = config;
-
-  if (id === 'webgpu') {
-    return new WebGPUProvider({
-      model,
-    });
-  }
 
   if (id === 'anthropic') {
     return new AnthropicProvider({
