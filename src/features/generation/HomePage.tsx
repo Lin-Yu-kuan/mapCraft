@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +7,6 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
-  Clock,
   Target,
   GraduationCap,
   Loader2,
@@ -24,8 +23,8 @@ export function HomePage() {
 
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState<Level>('beginner');
+  const [levelDescription, setLevelDescription] = useState('');
   const [goal, setGoal] = useState('');
-  const [timeBudgetHours, setTimeBudgetHours] = useState(10);
 
   // 進階參數
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -55,8 +54,8 @@ export function HomePage() {
 
     const options: GenerationOptions = {
       level,
+      levelDescription: levelDescription.trim() || undefined,
       goal: goal.trim() || undefined,
-      timeBudgetHours,
       maxDepth,
       maxBreadth,
       maxNodes,
@@ -172,43 +171,30 @@ export function HomePage() {
               </button>
             </div>
 
-            {/* 程度與時數選擇卡 */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-left">
-              {/* 熟悉程度 */}
-              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-950">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+            {/* 熟悉程度選擇卡 */}
+            <div className="text-left">
+              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-950 space-y-2">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
                   <GraduationCap className="h-3.5 w-3.5 text-emerald-500" />
                   <span>{t('generation.levelLabel')}</span>
                 </label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value as Level)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 transition-colors focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  <option value="beginner">{t('generation.levelBeginner')}</option>
-                  <option value="some">{t('generation.levelSome')}</option>
-                  <option value="advanced">{t('generation.levelAdvanced')}</option>
-                </select>
-              </div>
-
-              {/* 預估學習時數 */}
-              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-950">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                  <Clock className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>{t('generation.timeBudgetLabel')}</span>
-                </label>
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value as Level)}
+                    className="sm:col-span-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 transition-colors focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <option value="beginner">{t('generation.levelBeginner')}</option>
+                    <option value="some">{t('generation.levelSome')}</option>
+                    <option value="advanced">{t('generation.levelAdvanced')}</option>
+                  </select>
                   <input
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={timeBudgetHours}
-                    onChange={(e) => setTimeBudgetHours(Number(e.target.value) || 10)}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 transition-colors focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    type="text"
+                    value={levelDescription}
+                    onChange={(e) => setLevelDescription(e.target.value)}
+                    placeholder={t('generation.levelDescPlaceholder')}
+                    className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-800 transition-colors focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {t('generation.timeBudgetUnit')}
-                  </span>
                 </div>
               </div>
             </div>

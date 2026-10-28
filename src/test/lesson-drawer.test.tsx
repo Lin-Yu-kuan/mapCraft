@@ -268,4 +268,51 @@ describe('LessonDrawer & Progress State Machine (FR-04, FR-05 & AC-04)', () => {
 
     expect(onUpdateMock).toHaveBeenCalledWith('1', 'done');
   });
+
+  it('切換節點時前置節點提醒警告框會自動取消', async () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <Providers>
+          <LessonDrawer
+            map={mockMap}
+            nodeId="2"
+            status="todo"
+            onClose={vi.fn()}
+          />
+        </Providers>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('✨ 生成學習筆記')).toBeInTheDocument();
+    });
+
+    // 點擊生成，因為前置節點 1 未生成，觸發前置提醒彈窗
+    await act(async () => {
+      fireEvent.click(screen.getByText('✨ 生成學習筆記'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('前置節點尚未生成筆記')).toBeInTheDocument();
+    });
+
+    // 切換至其他節點
+    rerender(
+      <MemoryRouter>
+        <Providers>
+          <LessonDrawer
+            map={mockMap}
+            nodeId="1"
+            status="todo"
+            onClose={vi.fn()}
+          />
+        </Providers>
+      </MemoryRouter>
+    );
+
+    // 斷言前置提醒警告框已自動關閉取消
+    await waitFor(() => {
+      expect(screen.queryByText('前置節點尚未生成筆記')).not.toBeInTheDocument();
+    });
+  });
 });

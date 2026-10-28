@@ -28,6 +28,7 @@ export interface GenerationOptions {
   maxNodes: number;
   temperature: number;
   level: Level;
+  levelDescription?: string;
   goal?: string;
   timeBudgetHours?: number;
   language: 'zh-TW' | 'zh-CN' | 'en';

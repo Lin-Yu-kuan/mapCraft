@@ -46,9 +46,13 @@ export function buildMapPrompt(topic: string, options: GenerationOptions): { sys
   const system = `你是資深課程設計師，擅長把任何主題拆解成可由淺入深、可直接照著學的學習地圖。
 你只輸出 JSON，不輸出任何說明文字、不使用 markdown code fence。`;
 
+  const levelDescText = options.levelDescription?.trim()
+    ? `\n程度背景補充：${options.levelDescription.trim()}`
+    : '';
+
   const user = `<<<LEARNER_INPUT
 主題：${topic.trim()}
-目前程度：${options.level}（beginner=完全沒接觸 / some=看過文章 / advanced=做過專案）
+目前程度：${options.level}（beginner=完全沒接觸 / some=看過文章 / advanced=做過專案）${levelDescText}
 學習目標：${options.goal?.trim() || '全面系統化掌握此主題'}
 可用總時間：${options.timeBudgetHours ?? 10} 小時
 語言：繁體中文（台灣用語）

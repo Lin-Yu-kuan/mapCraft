@@ -160,6 +160,7 @@
     "levelBeginner": "初學者（完全沒接觸過）",
     "levelSome": "略懂（看過技術文章或概念）",
     "levelAdvanced": "進階（已有實際專案經驗）",
+    "levelDescPlaceholder": "可補充說明背景經驗（例：寫過 Python 但完全沒接觸過 Go、已有兩年前端經驗...）",
     "goalLabel": "學習目標或期望成果",
     "goalPlaceholder": "例如：想在兩週內能獨立建構微服務並排查常見故障",
     "timeBudgetLabel": "可用總學習時間",

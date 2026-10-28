@@ -68,6 +68,21 @@ describe('HomePage & Generation Flow (FR-02 & AC-02)', () => {
     expect(submitBtn).not.toBeDisabled();
   });
 
+  it('支援輸入目前熟悉程度的補充說明', async () => {
+    await act(async () => {
+      renderWithProviders();
+    });
+
+    const levelDescInput = screen.getByPlaceholderText(/可補充說明背景經驗/);
+    expect(levelDescInput).toBeInTheDocument();
+
+    fireEvent.change(levelDescInput, {
+      target: { value: '寫過 2 年 Python，想轉學習 Go' },
+    });
+
+    expect((levelDescInput as HTMLInputElement).value).toBe('寫過 2 年 Python，想轉學習 Go');
+  });
+
   it('可展開與收合進階設定參數面板', async () => {
     await act(async () => {
       renderWithProviders();

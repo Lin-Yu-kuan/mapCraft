@@ -68,6 +68,13 @@ export function LessonDrawer({
   const [showPrereqWarning, setShowPrereqWarning] = useState(false);
   const pendingGenerateRef = useRef<(() => void) | null>(null);
 
+  // 切換節點時，重置前置節點提醒警告框、等待觸發的任務與測驗作答狀態
+  useEffect(() => {
+    setShowPrereqWarning(false);
+    pendingGenerateRef.current = null;
+    setSelectedQuizOption(null);
+  }, [nodeId]);
+
   // 抽屜寬度可拖曳調整（預設 480px，範圍 380px ~ 900px）
   const [drawerWidth, setDrawerWidth] = useState<number>(() => {
     if (typeof window !== 'undefined') {

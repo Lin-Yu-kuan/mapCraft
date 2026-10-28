@@ -201,6 +201,7 @@
     "levelBeginner": "Beginner (No prior exposure)",
     "levelSome": "Some familiarity (Read articles or concepts)",
     "levelAdvanced": "Advanced (Hands-on project experience)",
+    "levelDescPlaceholder": "Add background details (e.g., know Python but new to Go, 2 years frontend exp...)",
     "goalLabel": "Learning Goal or Expected Outcome",
     "goalPlaceholder": "e.g., Build production microservices and troubleshoot common issues in 2 weeks",
     "timeBudgetLabel": "Total Available Study Time",
