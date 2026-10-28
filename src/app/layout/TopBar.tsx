@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Settings, FolderKanban, Languages, Sun, Moon } from 'lucide-react';
+import { Compass, Settings, FolderKanban, Languages, Sun, Moon, Download, Info, X } from 'lucide-react';
 import { useTheme } from '../themeContext';
+import { usePwaInstall } from '@/shared';
 
 interface TopBarProps {
   mapTitle?: string;
@@ -12,10 +14,20 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const { actualTheme, toggleTheme } = useTheme();
+  const { canInstall, isStandalone, isAppleDevice, promptInstall } = usePwaInstall();
+  const [showMacGuide, setShowMacGuide] = useState(false);
 
   const toggleLanguage = () => {
     const nextLng = i18n.language.startsWith('zh') ? 'en' : 'zh-TW';
     i18n.changeLanguage(nextLng);
+  };
+
+  const handleInstallClick = async () => {
+    if (canInstall) {
+      await promptInstall();
+    } else {
+      setShowMacGuide(true);
+    }
   };
 
   const isSettingsActive = location.pathname === '/settings';
@@ -57,6 +69,20 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
 
         {/* 右側：導覽與工具 */}
         <div className="flex items-center gap-2">
+          {/* PWA 安裝按鈕：僅在非 standalone 獨立視窗模式下顯示 */}
+          {!isStandalone && (
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
+              aria-label={t('topbar.installAppAria')}
+              title={t('topbar.installAppAria')}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden md:inline">{t('topbar.installApp')}</span>
+            </button>
+          )}
+
           <Link
             to="/library"
             className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
@@ -109,6 +135,41 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
           </button>
         </div>
       </div>
+
+      {/* Mac / 手動安裝導引彈窗 */}
+      {showMacGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <Info className="h-5 w-5" />
+                <h3 className="font-semibold text-slate-900 dark:text-white">
+                  {isAppleDevice ? t('topbar.installSafariTitle') : t('topbar.installApp')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMacGuide(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              {t('topbar.installSafariGuide')}
+            </p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowMacGuide(false)}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              >
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

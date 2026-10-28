@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad)" />
+  <circle cx="96" cy="96" r="62" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.3" stroke-dasharray="6 6" />
+  <g filter="url(#shadow)">
+    <!-- Compass Rose / Needle -->
+    <polygon points="96,38 114,88 96,104 78,88" fill="#ffffff" />
+    <polygon points="96,154 114,104 96,88 78,104" fill="#a7f3d0" />
+    <circle cx="96" cy="96" r="10" fill="#065f46" stroke="#ffffff" stroke-width="4" />
+  </g>
+</svg>
+

@@ -27,7 +27,11 @@
     "libraryAria": "返回地圖庫",
     "themeToggleAria": "切換深淺色外觀",
     "themeLightTitle": "切換為淺色模式",
-    "themeDarkTitle": "切換為深色模式"
+    "themeDarkTitle": "切換為深色模式",
+    "installApp": "安裝桌面版",
+    "installAppAria": "安裝 MapCraft 桌面版",
+    "installSafariTitle": "在 Mac 安裝桌面 App",
+    "installSafariGuide": "在 Mac Safari 上：請點擊頂部選單列「檔案」→「加入 Dock」，即可將 MapCraft 當作獨立桌面應用程式使用！"
   },
   "home": {
     "heroTitle": "把任何主題，變成一張走得完的學習地圖",

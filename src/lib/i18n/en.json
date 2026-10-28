@@ -27,7 +27,11 @@
     "libraryAria": "Return to Library",
     "themeToggleAria": "Toggle color mode",
     "themeLightTitle": "Switch to light mode",
-    "themeDarkTitle": "Switch to dark mode"
+    "themeDarkTitle": "Switch to dark mode",
+    "installApp": "Install App",
+    "installAppAria": "Install MapCraft App",
+    "installSafariTitle": "Install App on Mac",
+    "installSafariGuide": "On Mac Safari: click 'File' in the top menu bar -> 'Add to Dock' to install MapCraft as a standalone desktop app!"
   },
   "home": {
     "heroTitle": "Turn any topic into an actionable learning map",

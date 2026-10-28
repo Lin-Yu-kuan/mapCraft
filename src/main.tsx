@@ -14,3 +14,12 @@ createRoot(rootElement).render(
     <App />
   </StrictMode>
 );
+
+// 註冊 PWA Service Worker
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // ignore registration error
+    });
+  });
+}
