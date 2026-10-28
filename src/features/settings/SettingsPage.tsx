@@ -13,6 +13,7 @@ import {
   Trash2,
   HardDrive,
   Cpu,
+  RefreshCw,
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -20,7 +21,9 @@ import {
   getDefaultModel,
   createProvider,
   isWebGPUSupported,
+  isWebGPUModelCached,
   addWebGPUProgressListener,
+  getErrorMessage,
 } from '@/lib/llm';
 import {
   getStorageMode,
@@ -56,6 +59,20 @@ export function SettingsPage() {
   const [dataStats, setDataStats] = useState({ maps: 0, progress: 0, lessons: 0 });
   const [webGpuProgress, setWebGpuProgress] = useState<{ progress: number; text: string } | null>(null);
   const [isPreloadingGpu, setIsPreloadingGpu] = useState(false);
+  const [webGpuModelCache, setWebGpuModelCache] = useState<{
+    map: 'checking' | 'available' | 'missing' | 'error';
+    lesson: 'checking' | 'available' | 'missing' | 'error';
+  }>({ map: 'checking', lesson: 'checking' });
+
+  // 動態模型拉取與自訂輸入狀態
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [fetchModelsMsg, setFetchModelsMsg] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [customMapModel, setCustomMapModel] = useState(false);
+  const [customLessonModel, setCustomLessonModel] = useState(false);
 
   const hideKeyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeMeta = getProviderMeta(providerId);
@@ -70,6 +87,29 @@ export function SettingsPage() {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (providerId !== 'webgpu') return;
+
+    let active = true;
+    setWebGpuModelCache({ map: 'checking', lesson: 'checking' });
+
+    const checkCache = (model: string) =>
+      isWebGPUModelCached(model)
+        .then((available) => (available ? 'available' as const : 'missing' as const))
+        .catch(() => 'error' as const);
+
+    void Promise.all([
+      checkCache(mapModel || getDefaultModel('webgpu', 'map')),
+      checkCache(lessonModel || getDefaultModel('webgpu', 'lesson')),
+    ]).then(([map, lesson]) => {
+      if (active) setWebGpuModelCache({ map, lesson });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [providerId, mapModel, lessonModel]);
 
   const refreshStats = async () => {
     try {
@@ -149,6 +189,10 @@ export function SettingsPage() {
     setProviderId(newId);
     setTestResult(null);
     setSavedSuccess(false);
+    setFetchedModels([]);
+    setFetchModelsMsg(null);
+    setCustomMapModel(false);
+    setCustomLessonModel(false);
 
     const meta = getProviderMeta(newId);
     if (meta) {
@@ -188,7 +232,7 @@ export function SettingsPage() {
     setSavedSuccess(false);
 
     const abortController = new AbortController();
-    const timeoutTimer = setTimeout(() => abortController.abort(), 15000);
+    const timeoutTimer = setTimeout(() => abortController.abort(), 30000);
 
     try {
       const provider = createProvider(
@@ -222,6 +266,54 @@ export function SettingsPage() {
     } finally {
       clearTimeout(timeoutTimer);
       setIsTesting(false);
+    }
+  };
+
+  // 自動從供應商取得線上可用模型清單
+  const handleFetchModels = async () => {
+    setIsFetchingModels(true);
+    setFetchModelsMsg(null);
+    const abortController = new AbortController();
+    const timeoutTimer = setTimeout(() => abortController.abort(), 15000);
+
+    try {
+      const provider = createProvider(
+        {
+          id: providerId,
+          baseUrl: baseUrl.trim() || activeMeta?.defaultBaseUrl || '',
+          model: mapModel.trim() || getDefaultModel(providerId, 'map'),
+        },
+        apiKey.trim()
+      );
+
+      if (provider.listModels) {
+        const list = await provider.listModels(abortController.signal);
+        if (list && list.length > 0) {
+          setFetchedModels(list);
+          setFetchModelsMsg({
+            type: 'success',
+            text: t('settings.fetchModelsSuccess', { count: list.length }),
+          });
+        } else {
+          setFetchModelsMsg({
+            type: 'error',
+            text: t('settings.fetchModelsFailed'),
+          });
+        }
+      } else {
+        setFetchModelsMsg({
+          type: 'error',
+          text: t('settings.fetchModelsFailed'),
+        });
+      }
+    } catch {
+      setFetchModelsMsg({
+        type: 'error',
+        text: t('settings.fetchModelsFailed'),
+      });
+    } finally {
+      clearTimeout(timeoutTimer);
+      setIsFetchingModels(false);
     }
   };
 
@@ -307,6 +399,58 @@ export function SettingsPage() {
                 </div>
               </div>
 
+              <div className="rounded-lg border border-emerald-100 bg-white/80 p-3 text-xs text-slate-700 dark:border-emerald-900/40 dark:bg-slate-900/80 dark:text-slate-300">
+                <p>{t('settings.webgpuStorageLocation')}</p>
+                <p className="mt-2 flex items-center gap-1.5 font-medium">
+                  {webGpuModelCache.map === 'available' ? (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      {t('settings.webgpuModelAvailable', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
+                    </>
+                  ) : webGpuModelCache.map === 'checking' ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t('settings.webgpuCheckingCache', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
+                    </>
+                  ) : webGpuModelCache.map === 'error' ? (
+                    <>
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      {t('settings.webgpuCacheCheckFailed', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      {t('settings.webgpuModelNotAvailable', { model: mapModel, role: t('settings.webgpuMapModelLabel') })}
+                    </>
+                  )}
+                </p>
+                {lessonModel !== mapModel && (
+                  <p className="mt-1 flex items-center gap-1.5 font-medium">
+                    {webGpuModelCache.lesson === 'available' ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        {t('settings.webgpuModelAvailable', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
+                      </>
+                    ) : webGpuModelCache.lesson === 'checking' ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {t('settings.webgpuCheckingCache', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
+                      </>
+                    ) : webGpuModelCache.lesson === 'error' ? (
+                      <>
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        {t('settings.webgpuCacheCheckFailed', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        {t('settings.webgpuModelNotAvailable', { model: lessonModel, role: t('settings.webgpuLessonModelLabel') })}
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+
               {/* 容量與版本建議 */}
               <div className="rounded-lg bg-white/80 p-3 text-xs space-y-1.5 border border-emerald-100 dark:border-emerald-900/40 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300">
                 <div className="font-semibold text-slate-800 dark:text-slate-200">
@@ -323,6 +467,9 @@ export function SettingsPage() {
                     {t('settings.webgpuModel15B')}
                   </span>
                   <span>{t('settings.webgpuModel15BDesc')}</span>
+                </div>
+                <div className="pt-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 border-t border-emerald-100/60 dark:border-emerald-900/40">
+                  {t('settings.webgpuActionNotice')}
                 </div>
               </div>
 
@@ -346,7 +493,12 @@ export function SettingsPage() {
               <div className="flex items-center gap-3 pt-1">
                 <button
                   type="button"
-                  disabled={!hasWebGPUSupport || isPreloadingGpu}
+                  disabled={
+                    !hasWebGPUSupport ||
+                    isPreloadingGpu ||
+                    webGpuModelCache.map === 'checking' ||
+                    webGpuModelCache.map === 'available'
+                  }
                   onClick={async () => {
                     setIsPreloadingGpu(true);
                     try {
@@ -355,16 +507,28 @@ export function SettingsPage() {
                         baseUrl: 'webgpu://local',
                         model: mapModel || 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
                       });
-                      const res = await p.ping();
-                      if (res.ok) {
-                        alert(t('settings.webgpuReady'));
+                      if ('preload' in p && typeof (p as { preload?: () => Promise<void> }).preload === 'function') {
+                        await (p as { preload: () => Promise<void> }).preload();
                       } else {
-                        alert(res.error?.messageForUser || t('common.error'));
+                        await p.ping();
                       }
+                      setWebGpuModelCache((cache) => ({ ...cache, map: 'available' }));
+                      alert(t('settings.webgpuReady'));
                     } catch (err: unknown) {
-                      alert(err instanceof Error ? err.message : String(err));
+                      const message = getErrorMessage(err);
+                      alert(message || t('common.error'));
                     } finally {
                       setIsPreloadingGpu(false);
+                      void isWebGPUModelCached(mapModel || getDefaultModel('webgpu', 'map'))
+                        .then((available) => {
+                          setWebGpuModelCache((cache) => ({
+                            ...cache,
+                            map: available ? 'available' : 'missing',
+                          }));
+                        })
+                        .catch(() => {
+                          setWebGpuModelCache((cache) => ({ ...cache, map: 'error' }));
+                        });
                     }
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50 transition-all active:scale-95"
@@ -373,6 +537,11 @@ export function SettingsPage() {
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       <span>{t('settings.webgpuPreloading')}</span>
+                    </>
+                  ) : webGpuModelCache.map === 'available' ? (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>{t('settings.webgpuModelAvailableButton')}</span>
                     </>
                   ) : (
                     <>
@@ -504,31 +673,197 @@ export function SettingsPage() {
           )}
 
           {/* 模型角色指派（地圖規劃 vs 教材撰寫） */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-slate-900">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                {t('settings.mapModelLabel')}
-              </label>
-              <input
-                type="text"
-                value={mapModel}
-                onChange={(e) => setMapModel(e.target.value)}
-                placeholder={t('settings.customModelPlaceholder')}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              />
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-900 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                  模型設定
+                </span>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  從官方推薦清單中選取，或直接從您的帳號拉取所有在線可用模型。
+                </p>
+              </div>
+
+              {providerId !== 'webgpu' && (
+                <button
+                  type="button"
+                  onClick={handleFetchModels}
+                  disabled={isFetchingModels || (!apiKey.trim() && providerId !== 'ollama')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isFetchingModels ? 'animate-spin' : ''}`} />
+                  {isFetchingModels ? t('settings.fetchingModels') : t('settings.fetchModels')}
+                </button>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                {t('settings.lessonModelLabel')}
-              </label>
-              <input
-                type="text"
-                value={lessonModel}
-                onChange={(e) => setLessonModel(e.target.value)}
-                placeholder={t('settings.customModelPlaceholder')}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              />
+            {fetchModelsMsg && (
+              <div
+                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                  fetchModelsMsg.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50'
+                    : 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50'
+                }`}
+              >
+                {fetchModelsMsg.type === 'success' ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                )}
+                <span>{fetchModelsMsg.text}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* 地圖規劃模型 */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('settings.mapModelLabel')}
+                  </label>
+                  {customMapModel ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomMapModel(false);
+                        setMapModel(getDefaultModel(providerId, 'map'));
+                      }}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      返回選單
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setCustomMapModel(true)}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      手動自訂
+                    </button>
+                  )}
+                </div>
+
+                {customMapModel ? (
+                  <input
+                    type="text"
+                    value={mapModel}
+                    onChange={(e) => setMapModel(e.target.value)}
+                    placeholder={t('settings.customModelPlaceholder')}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  />
+                ) : (
+                  <select
+                    value={mapModel}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setCustomMapModel(true);
+                      } else {
+                        setMapModel(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  >
+                    {activeMeta?.recommendedModels && activeMeta.recommendedModels.length > 0 && (
+                      <optgroup label={t('settings.recommendedGroup')}>
+                        {activeMeta.recommendedModels.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name || m.id}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {fetchedModels.length > 0 && (
+                      <optgroup label={t('settings.fetchedGroup')}>
+                        {fetchedModels
+                          .filter((fm) => !activeMeta?.recommendedModels.some((rm) => rm.id === fm))
+                          .map((fm) => (
+                            <option key={fm} value={fm}>
+                              {fm}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+
+                    <option value="__custom__">{t('settings.customModelOption')}</option>
+                  </select>
+                )}
+              </div>
+
+              {/* 教材撰寫模型 */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('settings.lessonModelLabel')}
+                  </label>
+                  {customLessonModel ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomLessonModel(false);
+                        setLessonModel(getDefaultModel(providerId, 'lesson'));
+                      }}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      返回選單
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setCustomLessonModel(true)}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      手動自訂
+                    </button>
+                  )}
+                </div>
+
+                {customLessonModel ? (
+                  <input
+                    type="text"
+                    value={lessonModel}
+                    onChange={(e) => setLessonModel(e.target.value)}
+                    placeholder={t('settings.customModelPlaceholder')}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  />
+                ) : (
+                  <select
+                    value={lessonModel}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setCustomLessonModel(true);
+                      } else {
+                        setLessonModel(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  >
+                    {activeMeta?.recommendedModels && activeMeta.recommendedModels.length > 0 && (
+                      <optgroup label={t('settings.recommendedGroup')}>
+                        {activeMeta.recommendedModels.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name || m.id}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {fetchedModels.length > 0 && (
+                      <optgroup label={t('settings.fetchedGroup')}>
+                        {fetchedModels
+                          .filter((fm) => !activeMeta?.recommendedModels.some((rm) => rm.id === fm))
+                          .map((fm) => (
+                            <option key={fm} value={fm}>
+                              {fm}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+
+                    <option value="__custom__">{t('settings.customModelOption')}</option>
+                  </select>
+                )}
+              </div>
             </div>
           </div>
 

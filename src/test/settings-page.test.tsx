@@ -38,6 +38,29 @@ describe('SettingsPage (SPEC §2.2 FR-01 & AC-01)', () => {
     expect(screen.getByText('儲存設定')).toBeInTheDocument();
   });
 
+  it('explains where WebGPU models are stored when WebGPU is selected', async () => {
+    await act(async () => {
+      render(
+        <Providers>
+          <SettingsPage />
+        </Providers>
+      );
+    });
+
+    const providerSelect = screen.getAllByRole('combobox')[0];
+    if (!providerSelect) throw new Error('Provider selector not found');
+
+    await act(async () => {
+      fireEvent.change(providerSelect, {
+        target: { value: 'webgpu' },
+      });
+    });
+
+    expect(
+      await screen.findByText(/不會出現在 Windows「下載」資料夾/)
+    ).toBeInTheDocument();
+  });
+
   it('toggles password visibility with 10s auto-hide timer', async () => {
     await act(async () => {
       render(

@@ -64,4 +64,6 @@ export interface LLMProvider {
   stream(req: GenerateRequest): AsyncIterable<{ delta: string }>;
   /** 連線測試 */
   ping(signal?: AbortSignal): Promise<PingResult>;
+  /** 列出此供應商目前支援或帳號可用的模型清單 */
+  listModels?(signal?: AbortSignal): Promise<string[]>;
 }

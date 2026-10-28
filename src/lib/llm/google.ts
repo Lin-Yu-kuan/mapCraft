@@ -50,6 +50,11 @@ export class GoogleGeminiProvider implements LLMProvider {
   }
 
   protected buildBody(req: GenerateRequest): Record<string, unknown> {
+    const genConfig: Record<string, unknown> = {
+      temperature: req.temperature,
+      maxOutputTokens: req.maxOutputTokens,
+    };
+
     const body: Record<string, unknown> = {
       contents: [
         {
@@ -57,10 +62,7 @@ export class GoogleGeminiProvider implements LLMProvider {
           parts: [{ text: req.user }],
         },
       ],
-      generationConfig: {
-        temperature: req.temperature,
-        maxOutputTokens: req.maxOutputTokens,
-      },
+      generationConfig: genConfig,
     };
 
     if (req.system) {
@@ -201,7 +203,7 @@ export class GoogleGeminiProvider implements LLMProvider {
         system: 'Connection test',
         user: 'ping',
         temperature: 0,
-        maxOutputTokens: 5,
+        maxOutputTokens: 20,
         signal,
       });
 
@@ -217,5 +219,52 @@ export class GoogleGeminiProvider implements LLMProvider {
         error: normalizeError(err, this.id),
       };
     }
+  }
+
+  async listModels(signal?: AbortSignal): Promise<string[]> {
+    const base = (
+      this.options.baseUrl || 'https://generativelanguage.googleapis.com/v1beta'
+    ).replace(/\/+$/, '');
+    const url = `${base}/models`;
+    const headers = this.getHeaders();
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal,
+      });
+    } catch (err) {
+      throw normalizeError(err, this.id);
+    }
+
+    if (!res.ok) {
+      let rawDetail: unknown;
+      try {
+        rawDetail = await res.json();
+      } catch {
+        rawDetail = await res.text();
+      }
+      throw normalizeError(rawDetail, this.id, res.status);
+    }
+
+    const data = await res.json();
+    if (!Array.isArray(data.models)) {
+      return [];
+    }
+
+    return data.models
+      .filter((m: { supportedGenerationMethods?: string[] }) =>
+        m.supportedGenerationMethods?.includes('generateContent')
+      )
+      .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+      .sort((a: string, b: string) => {
+        // 優先將 flash 排在前面，pro 其次
+        const aFlash = a.includes('flash') ? 0 : 1;
+        const bFlash = b.includes('flash') ? 0 : 1;
+        if (aFlash !== bFlash) return aFlash - bFlash;
+        return a.localeCompare(b);
+      });
   }
 }

@@ -249,4 +249,24 @@ export class OpenAICompatibleProvider implements LLMProvider {
       };
     }
   }
+
+  async listModels(signal?: AbortSignal): Promise<string[]> {
+    const cleanBase = this.options.baseUrl.replace(/\/+$/, '');
+    const url = `${cleanBase}/models`;
+    const headers = this.getHeaders();
+    try {
+      const res = await fetch(url, { headers, signal });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data.data)) {
+        return data.data
+          .map((m: { id?: string }) => m.id || '')
+          .filter((id: string) => id.length > 0)
+          .sort();
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
 }

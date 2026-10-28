@@ -5,7 +5,12 @@ import type {
   TokenUsage,
 } from './types';
 import { normalizeError } from './errors';
-import { CreateMLCEngine, type MLCEngine, type InitProgressReport } from '@mlc-ai/web-llm';
+import {
+  CreateMLCEngine,
+  hasModelInCache,
+  type MLCEngine,
+  type InitProgressReport,
+} from '@mlc-ai/web-llm';
 
 export interface WebGPUProviderOptions {
   model?: string;
@@ -32,6 +37,13 @@ export function isWebGPUSupported(): boolean {
   return 'gpu' in navigator && Boolean((navigator as unknown as { gpu?: unknown }).gpu);
 }
 
+export async function isWebGPUModelCached(model: string): Promise<boolean> {
+  if (cachedEngine && currentModelId === model) {
+    return true;
+  }
+  return hasModelInCache(model);
+}
+
 export class WebGPUProvider implements LLMProvider {
   readonly id = 'webgpu';
   private model: string;
@@ -41,6 +53,14 @@ export class WebGPUProvider implements LLMProvider {
     // 預設推薦 3B 標準版（約 2.3GB）
     this.model = options.model || 'Qwen2.5-3B-Instruct-q4f16_1-MLC';
     this.onProgress = options.onProgress;
+  }
+
+  async preload(signal?: AbortSignal): Promise<void> {
+    try {
+      await this.getEngine(signal);
+    } catch (err: unknown) {
+      throw normalizeError(err, this.id);
+    }
   }
 
   private async getEngine(signal?: AbortSignal): Promise<MLCEngine> {
@@ -183,11 +203,14 @@ export class WebGPUProvider implements LLMProvider {
         };
       }
 
-      // 如果已經載入過模型，測試一小句或回傳 ok
+      // 檢查模型是否已載入完成
+      const isLoaded = Boolean(cachedEngine && currentModelId === this.model);
       return {
         ok: true,
         latencyMs: Math.round(performance.now() - startTime),
-        modelEcho: `WebGPU (${this.model}) Ready`,
+        modelEcho: isLoaded
+          ? `WebGPU (${this.model}) Ready`
+          : `WebGPU Supported (Model not preloaded)`,
       };
     } catch (err: unknown) {
       return {

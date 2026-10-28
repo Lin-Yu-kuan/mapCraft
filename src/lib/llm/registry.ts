@@ -99,13 +99,18 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     docUrl: 'https://aistudio.google.com/app/apikey',
     recommendedModels: [
       {
-        id: 'gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash（高性價比、速度極快）',
+        id: 'gemini-3.8-flash',
+        name: 'Gemini 3.8 Flash（高性價比、速度極快、最新世代）',
         role: 'both',
       },
       {
-        id: 'gemini-2.0-pro-exp',
-        name: 'Gemini 2.0 Pro（深度解析與概念推演）',
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash（穩定高效）',
+        role: 'map',
+      },
+      {
+        id: 'gemini-3.8-pro',
+        name: 'Gemini 3.8 Pro（深度解析與概念推演）',
         role: 'lesson',
       },
     ],

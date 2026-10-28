@@ -192,5 +192,35 @@ describe('AnthropicProvider & GoogleGeminiProvider (SPEC §5.2)', () => {
 
       expect(chunks.join('')).toBe('Gemini Flash');
     });
+
+    it('fetches and filters models via listModels', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          models: [
+            {
+              name: 'models/gemini-3.8-flash',
+              supportedGenerationMethods: ['generateContent', 'countTokens'],
+            },
+            {
+              name: 'models/gemini-embedding-001',
+              supportedGenerationMethods: ['embedContent'],
+            },
+            {
+              name: 'models/gemini-3.8-pro',
+              supportedGenerationMethods: ['generateContent'],
+            },
+          ],
+        }),
+      });
+
+      const provider = new GoogleGeminiProvider({
+        apiKey: 'AIzaSyTestKey123',
+        model: 'gemini-3.8-flash',
+      });
+
+      const models = await provider.listModels();
+      expect(models).toEqual(['gemini-3.8-flash', 'gemini-3.8-pro']);
+    });
   });
 });

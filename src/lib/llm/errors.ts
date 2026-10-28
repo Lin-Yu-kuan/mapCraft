@@ -1,6 +1,65 @@
 import type { NormalizedError } from './types';
 import { redact } from './redact';
 
+function extractUsableMessage(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+
+  if (value instanceof Error && value.message) {
+    return value.message.trim();
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const obj = value as {
+      messageForUser?: unknown;
+      message?: unknown;
+      error?: unknown;
+      detail?: unknown;
+      cause?: unknown;
+    };
+
+    const candidate =
+      obj.messageForUser ??
+      obj.message ??
+      obj.error ??
+      obj.detail ??
+      obj.cause;
+
+    if (candidate && candidate !== value) {
+      const nested = extractUsableMessage(candidate);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
+}
+
+export function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+
+  if (typeof err === 'string') {
+    return err;
+  }
+
+  if (typeof err === 'object' && err !== null) {
+    const direct = extractUsableMessage(err);
+    if (direct) {
+      return direct;
+    }
+
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+
+  return String(err);
+}
+
 export function normalizeError(
   err: unknown,
   providerId: string,
@@ -20,18 +79,7 @@ export function normalizeError(
     };
   }
 
-  let rawMessage = '';
-  if (err instanceof Error) {
-    rawMessage = err.message;
-  } else if (typeof err === 'object' && err !== null) {
-    try {
-      rawMessage = JSON.stringify(err);
-    } catch {
-      rawMessage = String(err);
-    }
-  } else {
-    rawMessage = String(err);
-  }
+  const rawMessage = getErrorMessage(err);
   const safeMessage = redact(rawMessage);
 
   // 1. 逾時與使用者主動中止
