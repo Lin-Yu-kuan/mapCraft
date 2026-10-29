@@ -17,6 +17,12 @@ export interface AppSettings {
   gdriveSyncFileId?: string;
   /** 最後一次成功與雲端同步的時間戳記 (ms) */
   lastSyncedAt?: number;
+  /** 記住上一次登入的 Google 帳號 Email */
+  gdriveUserEmail?: string;
+  /** 記住上一次登入的 Google 帳號使用者姓名 */
+  gdriveUserName?: string;
+  /** Google Drive Access Token 預估過期時間戳記 (ms) */
+  gdriveTokenExpiresAt?: number;
   /** 本地刪除的地圖墓碑紀錄（mapId -> deletedAt），用於多裝置同步刪除 */
   deletedMapIds?: Record<string, number>;
 }

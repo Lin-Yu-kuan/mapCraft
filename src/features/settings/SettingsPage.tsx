@@ -36,9 +36,11 @@ import { settingsRepo, db } from '@/lib/db';
 import {
   getGoogleDriveToken,
   setGoogleDriveToken,
-  clearGoogleDriveToken,
   verifyGoogleDriveToken,
   requestGoogleDriveOAuthToken,
+  persistGoogleDriveUserSession,
+  clearGoogleDriveUserSession,
+  isGoogleDriveTokenExpired,
   useCloudSync,
 } from '@/lib/cloud';
 
@@ -63,6 +65,7 @@ export function SettingsPage() {
     errorMsg?: string;
   } | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [keyAutoSaved, setKeyAutoSaved] = useState(false);
   const [dataStats, setDataStats] = useState({ maps: 0, progress: 0, lessons: 0 });
 
   // 動態模型拉取與自訂輸入狀態
@@ -87,6 +90,8 @@ export function SettingsPage() {
   const [gdriveToken, setGdriveToken] = useState('');
   const [gdriveAutoSync, setGdriveAutoSync] = useState(true);
   const [gdriveUser, setGdriveUser] = useState<string | null>(null);
+  const [gdriveEmail, setGdriveEmail] = useState<string | null>(null);
+  const [gdriveTokenExpired, setGdriveTokenExpired] = useState(false);
   const [gdriveBusy, setGdriveBusy] = useState(false);
   const [gdriveFeedback, setGdriveFeedback] = useState<{
     type: 'success' | 'error';
@@ -171,6 +176,38 @@ export function SettingsPage() {
       setGdriveAutoSync(dbSettings.gdriveAutoSync ?? true);
       const savedDriveToken = getGoogleDriveToken();
       setGdriveToken(savedDriveToken);
+
+      // 還原記住的 Google 帳號資訊（姓名與信箱）
+      if (dbSettings.gdriveUserEmail || dbSettings.gdriveUserName) {
+        setGdriveEmail(dbSettings.gdriveUserEmail || null);
+        const namePart = dbSettings.gdriveUserName || 'Google Drive User';
+        setGdriveUser(
+          dbSettings.gdriveUserEmail ? `${namePart} (${dbSettings.gdriveUserEmail})` : namePart
+        );
+      }
+
+      // 檢查 Google 授權狀態（是否過期或有效）
+      if (savedDriveToken) {
+        const isExpired = isGoogleDriveTokenExpired(dbSettings.gdriveTokenExpiresAt);
+        if (isExpired) {
+          setGdriveTokenExpired(true);
+        } else {
+          void verifyGoogleDriveToken(savedDriveToken).then(async (verify) => {
+            if (verify.ok && verify.user) {
+              setGdriveTokenExpired(false);
+              setGdriveEmail(verify.user.emailAddress || null);
+              setGdriveUser(
+                verify.user.emailAddress
+                  ? `${verify.user.displayName} (${verify.user.emailAddress})`
+                  : verify.user.displayName
+              );
+              await persistGoogleDriveUserSession(verify.user);
+            } else {
+              setGdriveTokenExpired(true);
+            }
+          });
+        }
+      }
     }
     loadInitial();
   }, []);
@@ -308,6 +345,20 @@ export function SettingsPage() {
     }
   };
 
+  // 自動儲存金鑰至 LocalStorage / Dexie（失焦自動記憶，PWA重整不丟失）
+  const handleAutoSaveKey = async () => {
+    if (!apiKey.trim()) return;
+    saveStorageMode(storageMode);
+    setStoredApiKey(providerId, apiKey.trim(), storageMode);
+    await settingsRepo.saveSettings({
+      lastProviderId: providerId,
+      lastMapModelId: mapModel.trim(),
+      lastLessonModelId: lessonModel.trim(),
+    });
+    setKeyAutoSaved(true);
+    setTimeout(() => setKeyAutoSaved(false), 2500);
+  };
+
   // 儲存設定
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,8 +378,8 @@ export function SettingsPage() {
     setTimeout(() => setSavedSuccess(false), 4000);
   };
 
-  // Google OAuth 彈窗授權連結
-  const handleOAuthConnect = async () => {
+  // Google OAuth 彈窗授權連結（支援 login_hint 快速續期）
+  const handleOAuthConnect = async (reauth: boolean = false) => {
     setGdriveBusy(true);
     setGdriveFeedback(null);
     try {
@@ -336,15 +387,23 @@ export function SettingsPage() {
         gdriveClientId: gdriveClientId.trim(),
         gdriveAutoSync,
       });
-      const token = await requestGoogleDriveOAuthToken(gdriveClientId);
+      const loginHint = reauth && gdriveEmail ? gdriveEmail : undefined;
+      const { token, expiresIn } = await requestGoogleDriveOAuthToken(
+        gdriveClientId,
+        loginHint
+      );
       setGdriveToken(token);
+      setGdriveTokenExpired(false);
+
       const verify = await verifyGoogleDriveToken(token);
       if (verify.ok && verify.user) {
+        setGdriveEmail(verify.user.emailAddress || null);
         setGdriveUser(
           verify.user.emailAddress
             ? `${verify.user.displayName} (${verify.user.emailAddress})`
             : verify.user.displayName
         );
+        await persistGoogleDriveUserSession(verify.user, expiresIn);
       }
       await refreshCloudState();
       const synced = await triggerSync();
@@ -352,7 +411,7 @@ export function SettingsPage() {
       if (synced) {
         setGdriveFeedback({
           type: 'success',
-          text: t('cloud.syncSuccessMsg'),
+          text: reauth ? t('cloud.reauthSuccessMsg') : t('cloud.syncSuccessMsg'),
         });
       }
     } catch (err) {
@@ -398,11 +457,14 @@ export function SettingsPage() {
       }
 
       if (verify.user) {
+        setGdriveEmail(verify.user.emailAddress || null);
         setGdriveUser(
           verify.user.emailAddress
             ? `${verify.user.displayName} (${verify.user.emailAddress})`
             : verify.user.displayName
         );
+        setGdriveTokenExpired(false);
+        await persistGoogleDriveUserSession(verify.user);
       }
 
       await refreshCloudState();
@@ -449,13 +511,11 @@ export function SettingsPage() {
   };
 
   const handleDisconnectDrive = async () => {
-    clearGoogleDriveToken();
+    await clearGoogleDriveUserSession();
     setGdriveToken('');
     setGdriveUser(null);
-    await settingsRepo.saveSettings({
-      gdriveAutoSync: false,
-      gdriveSyncFileId: undefined,
-    });
+    setGdriveEmail(null);
+    setGdriveTokenExpired(false);
     await refreshCloudState();
     setGdriveFeedback({
       type: 'success',
@@ -515,6 +575,11 @@ export function SettingsPage() {
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t('settings.apiKeyLabel')}
+                {keyAutoSaved && (
+                  <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+                    ✓ {t('cloud.autoSavedKey')}
+                  </span>
+                )}
               </label>
               {activeMeta?.docUrl && (
                 <a
@@ -533,6 +598,7 @@ export function SettingsPage() {
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value.trim())}
+                onBlur={() => void handleAutoSaveKey()}
                 placeholder={t('settings.apiKeyPlaceholder')}
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-12 text-sm font-mono text-slate-900 transition-all focus:border-emerald-500 focus:outline-hidden focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
               />
@@ -895,21 +961,72 @@ export function SettingsPage() {
 
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              gdriveToken.trim()
+              gdriveToken.trim() && !gdriveTokenExpired
                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                : gdriveEmail || gdriveTokenExpired
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
             }`}
           >
-            {gdriveToken.trim()
+            {gdriveToken.trim() && !gdriveTokenExpired
               ? cloudStatus === 'syncing'
                 ? t('cloud.statusSyncing')
                 : t('cloud.statusSynced')
-              : t('cloud.statusDisconnected')}
+              : gdriveEmail || gdriveTokenExpired
+                ? t('cloud.statusExpired')
+                : t('cloud.statusDisconnected')}
           </span>
         </div>
 
-        {/* 未登入狀態：主登入按鈕與效益提示 */}
-        {!gdriveToken.trim() ? (
+        {/* 狀態 1：已記住上一個帳號，但授權已逾期（提供一鍵快速續期與登出） */}
+        {(gdriveTokenExpired || (!gdriveToken.trim() && gdriveEmail)) ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  {t('cloud.connectedAs', { name: gdriveUser || gdriveEmail || '' })}
+                </span>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  （{t('cloud.statusExpired')}）
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {t('cloud.tokenExpiredNotice', { name: gdriveUser || gdriveEmail || '' })}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={gdriveBusy}
+                onClick={() => void handleOAuthConnect(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:from-sky-500 hover:to-emerald-500 disabled:opacity-50 cursor-pointer"
+              >
+                {gdriveBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                <span>
+                  {gdriveEmail
+                    ? `${t('cloud.reauthBtn')}（${gdriveEmail}）`
+                    : t('cloud.reauthBtn')}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                disabled={gdriveBusy}
+                onClick={() => void handleDisconnectDrive()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5 text-rose-500" />
+                <span>{t('cloud.disconnectBtn')}</span>
+              </button>
+            </div>
+          </div>
+        ) : !gdriveToken.trim() ? (
+          /* 狀態 2：從未登入或已登出狀態：主登入按鈕與效益提示 */
           <div className="space-y-4">
             <div>
               <button
@@ -937,7 +1054,7 @@ export function SettingsPage() {
             </div>
           </div>
         ) : (
-          /* 已登入狀態：帳號資訊、自動同步開關與操作 */
+          /* 狀態 3：已正常連線狀態：帳號資訊、自動同步開關與操作 */
           <div className="space-y-4">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30 space-y-2">
               {gdriveUser && (

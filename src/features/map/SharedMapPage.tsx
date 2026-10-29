@@ -19,7 +19,14 @@ import { decodeSharePayload, type SharePayload } from '@/domain/share';
 import { BackupSchema } from '@/domain/schemas';
 import { countLearningNodes, findNode } from '@/domain/tree';
 import type { LearningMap, NodeStatus, Lesson } from '@/domain/types';
-import { downloadDriveJsonFile, requestGoogleDriveOAuthToken, setGoogleDriveToken } from '@/lib/cloud/googleDrive';
+import {
+  downloadDriveJsonFile,
+  requestGoogleDriveOAuthToken,
+  setGoogleDriveToken,
+  verifyGoogleDriveToken,
+  persistGoogleDriveUserSession,
+} from '@/lib/cloud/googleDrive';
+import { settingsRepo } from '@/lib/db';
 import { saveSharedPayloadToLocal } from '@/lib/storage/backup';
 import { SafeMarkdown } from '@/shared/components/SafeMarkdown';
 import { MapCanvas } from './MapCanvas';
@@ -38,12 +45,29 @@ export function SharedMapPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [reloadCount, setReloadCount] = useState(0);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    void settingsRepo.getSettings().then((s) => {
+      if (s.gdriveUserEmail) setRememberedEmail(s.gdriveUserEmail);
+    });
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsLoggingIn(true);
     try {
-      const token = await requestGoogleDriveOAuthToken();
+      const { token, expiresIn } = await requestGoogleDriveOAuthToken(
+        undefined,
+        rememberedEmail || undefined
+      );
       setGoogleDriveToken(token);
+      const verify = await verifyGoogleDriveToken(token);
+      if (verify.ok && verify.user) {
+        await persistGoogleDriveUserSession(verify.user, expiresIn);
+        if (verify.user.emailAddress) {
+          setRememberedEmail(verify.user.emailAddress);
+        }
+      }
       setReloadCount((c) => c + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -194,7 +218,11 @@ export function SharedMapPage() {
               ) : (
                 <Cloud className="h-3.5 w-3.5" />
               )}
-              <span>登入 Google 以存取此地圖</span>
+              <span>
+                {rememberedEmail
+                  ? `以 ${rememberedEmail} 快速重新授權`
+                  : '登入 Google 以存取此地圖'}
+              </span>
             </button>
           )}
           {gdriveParam && (

@@ -4,6 +4,7 @@ import {
   setStoredApiKey,
   clearStoredApiKey,
 } from '../storage/settings';
+import { settingsRepo } from '../db/repos/settings';
 import { createBackupData } from '../storage/backup';
 import { buildShareUrl } from '@/domain/share';
 
@@ -36,6 +37,43 @@ export function clearGoogleDriveToken(): void {
 }
 
 /**
+ * 持久化儲存已登入的 Google 帳號資訊（姓名、Email、Token 過期時間戳）
+ */
+export async function persistGoogleDriveUserSession(
+  user: GoogleDriveUser,
+  expiresInSec: number = 3600
+): Promise<void> {
+  const expiresAt = Date.now() + Math.max(60, expiresInSec) * 1000;
+  await settingsRepo.saveSettings({
+    gdriveUserEmail: user.emailAddress || '',
+    gdriveUserName: user.displayName || '',
+    gdriveTokenExpiresAt: expiresAt,
+  });
+}
+
+/**
+ * 徹底登出 Google 帳號並清除所有登入資訊
+ */
+export async function clearGoogleDriveUserSession(): Promise<void> {
+  clearGoogleDriveToken();
+  await settingsRepo.saveSettings({
+    gdriveUserEmail: undefined,
+    gdriveUserName: undefined,
+    gdriveTokenExpiresAt: undefined,
+    gdriveAutoSync: false,
+    gdriveSyncFileId: undefined,
+  });
+}
+
+/**
+ * 檢查 Token 是否已經過期（預留 60 秒緩衝）
+ */
+export function isGoogleDriveTokenExpired(expiresAt?: number): boolean {
+  if (!expiresAt) return false;
+  return Date.now() >= expiresAt - 60000;
+}
+
+/**
  * 若當前視窗為 Google OAuth 2.0 Implicit Flow 彈窗回呼（URL hash 含 access_token），
  * 自動將 token 傳回母視窗並關閉彈窗。
  */
@@ -47,6 +85,8 @@ export function captureOAuthRedirectTokenIfPresent(): boolean {
   const queryPart = hash.startsWith('#') ? hash.slice(1) : hash;
   const params = new URLSearchParams(queryPart);
   const accessToken = params.get('access_token');
+  const expiresInStr = params.get('expires_in');
+  const expiresInSec = expiresInStr ? parseInt(expiresInStr, 10) : 3600;
   const state = params.get('state');
 
   if (accessToken && state === 'mapcraft_gdrive_oauth') {
@@ -57,6 +97,7 @@ export function captureOAuthRedirectTokenIfPresent(): boolean {
           {
             type: 'MAPCRAFT_GDRIVE_OAUTH_SUCCESS',
             accessToken,
+            expiresIn: expiresInSec,
           },
           window.location.origin
         );
@@ -77,8 +118,13 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
 
 /**
  * 啟動 Google OAuth 2.0 授權彈窗取得 Google Drive (drive.file) Access Token
+ * @param clientId 自訂 Google Client ID（選填，若無則使用預設值）
+ * @param loginHint 記住的上一個帳號 email，用於一鍵快速續期（免重複手動選帳號）
  */
-export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string> {
+export function requestGoogleDriveOAuthToken(
+  clientId?: string,
+  loginHint?: string
+): Promise<{ token: string; expiresIn: number }> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
       reject(new Error('瀏覽器環境不可用'));
@@ -108,7 +154,12 @@ export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string>
     authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/drive.file');
     authUrl.searchParams.set('include_granted_scopes', 'true');
     authUrl.searchParams.set('state', 'mapcraft_gdrive_oauth');
-    authUrl.searchParams.set('prompt', 'select_account');
+
+    if (loginHint && loginHint.trim()) {
+      authUrl.searchParams.set('login_hint', loginHint.trim());
+    } else {
+      authUrl.searchParams.set('prompt', 'select_account');
+    }
 
     const width = 520;
     const height = 640;
@@ -143,8 +194,10 @@ export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string>
       ) {
         settled = true;
         cleanup();
-        setGoogleDriveToken(event.data.accessToken);
-        resolve(event.data.accessToken);
+        const token = event.data.accessToken as string;
+        const expiresIn = typeof event.data.expiresIn === 'number' ? event.data.expiresIn : 3600;
+        setGoogleDriveToken(token);
+        resolve({ token, expiresIn });
       }
     };
 
@@ -157,7 +210,7 @@ export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string>
           cleanup();
           const saved = getGoogleDriveToken();
           if (saved) {
-            resolve(saved);
+            resolve({ token: saved, expiresIn: 3600 });
           } else {
             reject(new Error('Google 授權視窗已關閉，未完成連結。'));
           }
