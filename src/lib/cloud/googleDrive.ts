@@ -72,6 +72,9 @@ export function captureOAuthRedirectTokenIfPresent(): boolean {
   return false;
 }
 
+export const DEFAULT_GOOGLE_CLIENT_ID =
+  '511004837788-4eds2v5ca2pktmtsvrcoi8cr165e6ct0.apps.googleusercontent.com';
+
 /**
  * 啟動 Google OAuth 2.0 授權彈窗取得 Google Drive (drive.file) Access Token
  */
@@ -85,7 +88,7 @@ export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string>
     const trimmedClientId = (
       clientId ||
       (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_ID) ||
-      ''
+      DEFAULT_GOOGLE_CLIENT_ID
     ).trim();
 
     if (!trimmedClientId) {
