@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   BackgroundVariant,
   useNodesState,
   useEdgesState,
@@ -170,17 +169,6 @@ export function MapCanvas({
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#cbd5e1" className="opacity-40 dark:opacity-20" />
         <Controls showInteractive={false} className="bg-white shadow-sm dark:bg-slate-900" />
-        <MiniMap
-          nodeColor={(n) => {
-            const nodeData = n.data as { isRoot?: boolean; status?: NodeStatus };
-            if (nodeData?.isRoot) return '#10b981';
-            if (nodeData?.status === 'done') return '#10b981';
-            if (nodeData?.status === 'learning') return '#f59e0b';
-            return '#cbd5e1';
-          }}
-          className="bg-white/80 shadow-sm backdrop-blur-xs dark:bg-slate-900/80"
-          maskColor="rgba(0, 0, 0, 0.1)"
-        />
       </ReactFlow>
     </div>
   );
