@@ -31,7 +31,9 @@
     "installApp": "安裝桌面版",
     "installAppAria": "安裝 MapCraft 桌面版",
     "installSafariTitle": "在 Mac 安裝桌面 App",
-    "installSafariGuide": "在 Mac Safari 上：請點擊頂部選單列「檔案」→「加入 Dock」，即可將 MapCraft 當作獨立桌面應用程式使用！"
+    "installSafariGuide": "在 Mac Safari 上：請點擊頂部選單列「檔案」→「加入 Dock」，即可將 MapCraft 當作獨立桌面應用程式使用！",
+    "installGuideTitle": "安裝桌面版應用程式",
+    "installWindowsGuide": "若您使用 Windows (Chrome / Edge 瀏覽器)：\n1. 點擊瀏覽器網址列最右側的「安裝」或「在應用程式中開啟」圖示。\n2. 或點選瀏覽器右上角選單「⋮」➔「儲存並分享」➔「建立捷徑...」並勾選「以視窗方式開啟」，即可在桌面產生全新圖示的獨立 App！"
   },
   "home": {
     "heroTitle": "把任何主題，變成一張走得完的學習地圖",

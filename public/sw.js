@@ -1,11 +1,11 @@
-const CACHE_NAME = 'mapcraft-v1';
+const CACHE_NAME = 'mapcraft-v2';
 
 const STATIC_PRECACHE = [
   './',
   './index.html',
   './manifest.json',
-  './icons/icon-192.svg',
-  './icons/icon-512.svg',
+  './icons/icon-192.svg?v=2',
+  './icons/icon-512.svg?v=2',
 ];
 
 // 安裝階段：預先快取核心 App Shell

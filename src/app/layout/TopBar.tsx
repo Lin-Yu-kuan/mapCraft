@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Compass,
   Settings,
   FolderKanban,
   Languages,
@@ -19,6 +18,39 @@ import {
 import { useTheme } from '../themeContext';
 import { usePwaInstall } from '@/shared';
 import { useCloudSync } from '@/lib/cloud';
+
+/**
+ * 星網拓撲知識樹品牌 Logo (Neural Knowledge Tree & Graph)
+ */
+export function MapCraftLogo({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* 拓撲網絡連線 */}
+      <path
+        d="M10 12.5L5.5 8M10 12.5L17.5 7.5M17.5 7.5L20.5 5M10 12.5L18.5 14M10 12.5L14 19"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* 分支知識節點 */}
+      <circle cx="5.5" cy="8" r="1.8" fill="currentColor" />
+      <circle cx="17.5" cy="7.5" r="2.2" fill="currentColor" />
+      <circle cx="20.5" cy="5" r="1.2" fill="currentColor" opacity="0.8" />
+      <circle cx="18.5" cy="14" r="1.8" fill="currentColor" />
+      <circle cx="14" cy="19" r="2" fill="currentColor" />
+      {/* 核心主節點 (Root) 帶同心微光環 */}
+      <circle cx="10" cy="12.5" r="4.2" stroke="currentColor" strokeWidth="1.2" opacity="0.4" />
+      <circle cx="10" cy="12.5" r="2.8" fill="currentColor" />
+    </svg>
+  );
+}
 
 interface TopBarProps {
   mapTitle?: string;
@@ -59,7 +91,7 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
             className="flex items-center gap-2 font-bold tracking-tight text-slate-900 dark:text-white"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-              <Compass className="h-5 w-5" aria-hidden="true" />
+              <MapCraftLogo className="h-5 w-5" />
             </div>
             <span className="text-lg">
               {t('common.appName')}
@@ -200,7 +232,7 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                 <Info className="h-5 w-5" />
                 <h3 className="font-semibold text-slate-900 dark:text-white">
-                  {isAppleDevice ? t('topbar.installSafariTitle') : t('topbar.installApp')}
+                  {isAppleDevice ? t('topbar.installSafariTitle') : t('topbar.installGuideTitle')}
                 </h3>
               </div>
               <button
@@ -211,8 +243,8 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-              {t('topbar.installSafariGuide')}
+            <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-line">
+              {isAppleDevice ? t('topbar.installSafariGuide') : t('topbar.installWindowsGuide')}
             </p>
             <div className="mt-6 flex justify-end">
               <button

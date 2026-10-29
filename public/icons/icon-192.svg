@@ -1,20 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#059669" />
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="45%" stop-color="#059669" />
       <stop offset="100%" stop-color="#047857" />
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.25" />
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#022c22" flood-opacity="0.35" />
     </filter>
   </defs>
-  <rect width="192" height="192" rx="42" fill="url(#bgGrad)" />
-  <circle cx="96" cy="96" r="62" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.3" stroke-dasharray="6 6" />
+
+  <!-- 背景圓角外框 -->
+  <rect width="192" height="192" rx="44" fill="url(#bgGrad)" />
+
+  <!-- 幾何星網背景輔助環 (Subtle Orbit Rings) -->
+  <circle cx="82" cy="100" r="68" fill="none" stroke="#ffffff" stroke-width="1.5"
+    stroke-opacity="0.12" stroke-dasharray="4 6" />
+  <circle cx="82" cy="100" r="42" fill="none" stroke="#ffffff" stroke-width="1.5"
+    stroke-opacity="0.16" />
+
   <g filter="url(#shadow)">
-    <!-- Compass Rose / Needle -->
-    <polygon points="96,38 114,88 96,104 78,88" fill="#ffffff" />
-    <polygon points="96,154 114,104 96,88 78,104" fill="#a7f3d0" />
-    <circle cx="96" cy="96" r="10" fill="#065f46" stroke="#ffffff" stroke-width="4" />
+    <!-- 拓撲網絡連接線 (Network Branch Curves) -->
+    <!-- 核心 -> 左上子分支 -->
+    <path d="M 82 100 Q 62 82 46 64" fill="none" stroke="#ffffff" stroke-width="3.5"
+      stroke-linecap="round" stroke-opacity="0.75" />
+    <!-- 核心 -> 右上主分支 -->
+    <path d="M 82 100 Q 112 84 136 62" fill="none" stroke="#ffffff" stroke-width="4"
+      stroke-linecap="round" stroke-opacity="0.9" />
+    <!-- 右上主分支 -> 右上子分支 -->
+    <path d="M 136 62 Q 152 52 162 44" fill="none" stroke="#ffffff" stroke-width="2.5"
+      stroke-linecap="round" stroke-opacity="0.7" />
+    <!-- 核心 -> 右中分支 -->
+    <path d="M 82 100 Q 120 106 148 114" fill="none" stroke="#ffffff" stroke-width="3.5"
+      stroke-linecap="round" stroke-opacity="0.85" />
+    <!-- 核心 -> 下方分支 -->
+    <path d="M 82 100 Q 94 132 112 152" fill="none" stroke="#ffffff" stroke-width="3.5"
+      stroke-linecap="round" stroke-opacity="0.8" />
+    <!-- 下方分支 -> 左下微節點 -->
+    <path d="M 112 152 Q 88 156 64 150" fill="none" stroke="#ffffff" stroke-width="2"
+      stroke-linecap="round" stroke-opacity="0.55" />
+
+    <!-- 拓撲節點 (Network Nodes) -->
+    <!-- 1. 左上子節點 -->
+    <circle cx="46" cy="64" r="7" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="2" />
+    <circle cx="46" cy="64" r="3" fill="#059669" />
+
+    <!-- 2. 右上主節點 -->
+    <circle cx="136" cy="62" r="9" fill="#ffffff" stroke="#a7f3d0" stroke-width="2.5" />
+    <circle cx="136" cy="62" r="4" fill="#047857" />
+
+    <!-- 3. 右上末梢子節點 -->
+    <circle cx="162" cy="44" r="5" fill="#a7f3d0" />
+
+    <!-- 4. 右中知識節點 -->
+    <circle cx="148" cy="114" r="8" fill="#ffffff" stroke="#a7f3d0" stroke-width="2" />
+    <circle cx="148" cy="114" r="3.5" fill="#059669" />
+
+    <!-- 5. 下方進度節點 -->
+    <circle cx="112" cy="152" r="8.5" fill="#ffffff" stroke="#a7f3d0" stroke-width="2" />
+    <circle cx="112" cy="152" r="4" fill="#047857" />
+
+    <!-- 6. 左下末梢節點 -->
+    <circle cx="64" cy="150" r="4.5" fill="#a7f3d0" />
+
+    <!-- 7. 核心根節點 (Central Core Node - 帶微光光環與 AI 星芒) -->
+    <circle cx="82" cy="100" r="22" fill="#ffffff" fill-opacity="0.18" />
+    <circle cx="82" cy="100" r="14" fill="#ffffff" stroke="#6ee7b7" stroke-width="3" />
+    <!-- 核心 AI 四角星芒 -->
+    <path d="M 82 92 Q 82 100 74 100 Q 82 100 82 108 Q 82 100 90 100 Q 82 100 82 92 Z"
+      fill="#047857" />
   </g>
 </svg>
-

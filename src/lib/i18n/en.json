@@ -31,7 +31,9 @@
     "installApp": "Install App",
     "installAppAria": "Install MapCraft App",
     "installSafariTitle": "Install App on Mac",
-    "installSafariGuide": "On Mac Safari: click 'File' in the top menu bar -> 'Add to Dock' to install MapCraft as a standalone desktop app!"
+    "installSafariGuide": "On Mac Safari: click 'File' in the top menu bar -> 'Add to Dock' to install MapCraft as a standalone desktop app!",
+    "installGuideTitle": "Install Desktop App",
+    "installWindowsGuide": "On Windows (Chrome / Edge):\n1. Click the 'Install' or 'Open in app' icon on the right side of the address bar.\n2. Or click the browser menu '⋮' -> 'Save and share' -> 'Create shortcut...' and check 'Open as window' to generate a desktop shortcut with the new icon!"
   },
   "home": {
     "heroTitle": "Turn any topic into an actionable learning map",

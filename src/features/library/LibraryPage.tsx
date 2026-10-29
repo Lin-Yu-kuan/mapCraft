@@ -9,7 +9,6 @@ import {
   Edit2,
   Check,
   X,
-  Compass,
   ArrowRight,
   Clock,
   Loader2,
@@ -328,7 +327,7 @@ export function LibraryPage() {
               to="/"
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
-              <Compass className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               <span>{t('library.craftMap')}</span>
             </Link>
           </div>

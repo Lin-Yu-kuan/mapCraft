@@ -12,13 +12,14 @@ import {
   CheckCircle2,
   HelpCircle,
   ExternalLink,
+  Cloud,
 } from 'lucide-react';
 
 import { decodeSharePayload, type SharePayload } from '@/domain/share';
 import { BackupSchema } from '@/domain/schemas';
 import { countLearningNodes, findNode } from '@/domain/tree';
 import type { LearningMap, NodeStatus, Lesson } from '@/domain/types';
-import { downloadDriveJsonFile } from '@/lib/cloud/googleDrive';
+import { downloadDriveJsonFile, requestGoogleDriveOAuthToken, setGoogleDriveToken } from '@/lib/cloud/googleDrive';
 import { saveSharedPayloadToLocal } from '@/lib/storage/backup';
 import { SafeMarkdown } from '@/shared/components/SafeMarkdown';
 import { MapCanvas } from './MapCanvas';
@@ -35,6 +36,21 @@ export function SharedMapPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoggingIn(true);
+    try {
+      const token = await requestGoogleDriveOAuthToken();
+      setGoogleDriveToken(token);
+      setReloadCount((c) => c + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   // 選中節點預覽抽屜
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -89,7 +105,7 @@ export function SharedMapPage() {
     return () => {
       isMounted = false;
     };
-  }, [dataParam, gdriveParam]);
+  }, [dataParam, gdriveParam, reloadCount]);
 
   const progressMap = useMemo(() => {
     const record: Record<string, NodeStatus> = {};
@@ -166,6 +182,21 @@ export function SharedMapPage() {
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {gdriveParam && (
+            <button
+              type="button"
+              disabled={isLoggingIn}
+              onClick={() => void handleGoogleSignIn()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
+            >
+              {isLoggingIn ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Cloud className="h-3.5 w-3.5" />
+              )}
+              <span>登入 Google 以存取此地圖</span>
+            </button>
+          )}
           {gdriveParam && (
             <a
               href={`https://drive.google.com/file/d/${encodeURIComponent(gdriveParam)}/view?usp=sharing`}

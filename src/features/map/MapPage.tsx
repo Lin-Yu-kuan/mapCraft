@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   MapPin,
   AlertCircle,
-  Compass,
   ArrowLeft,
   Loader2,
   PartyPopper,
@@ -355,7 +354,7 @@ export function MapPage() {
             to="/"
             className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
           >
-            <Compass className="h-3.5 w-3.5" />
+            <Network className="h-3.5 w-3.5" />
             <span>{t('nav.newCraft')}</span>
           </Link>
         </div>

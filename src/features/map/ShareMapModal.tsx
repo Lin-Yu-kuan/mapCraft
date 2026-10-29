@@ -180,68 +180,7 @@ export function ShareMapModal({
           </button>
         </div>
 
-        {/* 區塊 1：方案 B 網址直接分享 */}
-        <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 space-y-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-            <Link2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span>{t('share.tabUrlTitle')}</span>
-          </div>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            {t('share.tabUrlDesc')}
-          </p>
-
-          {urlLoading ? (
-            <div className="flex items-center gap-2 py-2 text-xs text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-              <span>{t('common.loading')}</span>
-            </div>
-          ) : urlError ? (
-            <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{urlError}</span>
-            </div>
-          ) : (
-            <>
-              <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
-                {includesLessons || lessonsCount === 0
-                  ? t('share.urlIncludesLessons', {
-                      count: lessonsCount,
-                      kb: sizeKb,
-                    })
-                  : t('share.urlSkeletonOnly', { kb: sizeKb })}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={directShareUrl}
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-700 focus:outline-hidden dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyDirectUrl}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-colors"
-                >
-                  {copiedUrl ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" />
-                      <span>{t('share.copiedBtn')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>{t('share.copyUrlBtn')}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* 區塊 2：方案 A Google Drive 雲端分享 */}
+        {/* 區塊 1：方案 A Google Drive 雲端分享 */}
         <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
             <Cloud className="h-4 w-4 text-sky-600 dark:text-sky-400" />
@@ -334,6 +273,67 @@ export function ShareMapModal({
                 </div>
               )}
             </div>
+          )}
+        </div>
+
+        {/* 區塊 2：方案 B 網址直接分享 */}
+        <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 space-y-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+            <Link2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span>{t('share.tabUrlTitle')}</span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            {t('share.tabUrlDesc')}
+          </p>
+
+          {urlLoading ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+              <span>{t('common.loading')}</span>
+            </div>
+          ) : urlError ? (
+            <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{urlError}</span>
+            </div>
+          ) : (
+            <>
+              <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+                {includesLessons || lessonsCount === 0
+                  ? t('share.urlIncludesLessons', {
+                      count: lessonsCount,
+                      kb: sizeKb,
+                    })
+                  : t('share.urlSkeletonOnly', { kb: sizeKb })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={directShareUrl}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-700 focus:outline-hidden dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyDirectUrl}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-colors"
+                >
+                  {copiedUrl ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>{t('share.copiedBtn')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>{t('share.copyUrlBtn')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

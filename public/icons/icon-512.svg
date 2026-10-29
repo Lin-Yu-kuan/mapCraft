@@ -1,20 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#059669" />
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="45%" stop-color="#059669" />
       <stop offset="100%" stop-color="#047857" />
     </linearGradient>
-    <filter id="shadow512" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-opacity="0.3" />
+    <filter id="shadow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#022c22" flood-opacity="0.38" />
     </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bgGrad512)" />
-  <circle cx="256" cy="256" r="165" fill="none" stroke="#ffffff" stroke-width="10" stroke-opacity="0.3" stroke-dasharray="16 16" />
+
+  <!-- 背景圓角外框 (適合 iOS / Android Maskable) -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad512)" />
+
+  <!-- 幾何星網背景輔助環 (Subtle Orbit Rings) -->
+  <circle cx="218" cy="266" r="180" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.12" stroke-dasharray="8 12" />
+  <circle cx="218" cy="266" r="112" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.16" />
+
   <g filter="url(#shadow512)">
-    <!-- Compass Rose / Needle -->
-    <polygon points="256,102 304,235 256,277 208,235" fill="#ffffff" />
-    <polygon points="256,410 304,277 256,235 208,277" fill="#a7f3d0" />
-    <circle cx="256" cy="256" r="26" fill="#065f46" stroke="#ffffff" stroke-width="10" />
+    <!-- 拓撲網絡連接線 (Network Branch Curves) -->
+    <!-- 核心 -> 左上子分支 -->
+    <path d="M 218 266 Q 165 218 122 170" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-opacity="0.75" />
+    <!-- 核心 -> 右上主分支 -->
+    <path d="M 218 266 Q 298 224 362 165" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-opacity="0.9" />
+    <!-- 右上主分支 -> 右上子分支 -->
+    <path d="M 362 165 Q 405 138 432 118" fill="none" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" stroke-opacity="0.7" />
+    <!-- 核心 -> 右中分支 -->
+    <path d="M 218 266 Q 320 282 394 304" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-opacity="0.85" />
+    <!-- 核心 -> 下方分支 -->
+    <path d="M 218 266 Q 250 352 298 405" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-opacity="0.8" />
+    <!-- 下方分支 -> 左下微節點 -->
+    <path d="M 298 405 Q 234 416 170 400" fill="none" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" stroke-opacity="0.55" />
+
+    <!-- 拓撲節點 (Network Nodes) -->
+    <!-- 1. 左上子節點 -->
+    <circle cx="122" cy="170" r="19" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="5" />
+    <circle cx="122" cy="170" r="8" fill="#059669" />
+
+    <!-- 2. 右上主節點 -->
+    <circle cx="362" cy="165" r="24" fill="#ffffff" stroke="#a7f3d0" stroke-width="6" />
+    <circle cx="362" cy="165" r="10.5" fill="#047857" />
+
+    <!-- 3. 右上末梢子節點 -->
+    <circle cx="432" cy="118" r="13" fill="#a7f3d0" />
+
+    <!-- 4. 右中知識節點 -->
+    <circle cx="394" cy="304" r="21" fill="#ffffff" stroke="#a7f3d0" stroke-width="5" />
+    <circle cx="394" cy="304" r="9" fill="#059669" />
+
+    <!-- 5. 下方進度節點 -->
+    <circle cx="298" cy="405" r="22" fill="#ffffff" stroke="#a7f3d0" stroke-width="5" />
+    <circle cx="298" cy="405" r="10" fill="#047857" />
+
+    <!-- 6. 左下末梢節點 -->
+    <circle cx="170" cy="400" r="12" fill="#a7f3d0" />
+
+    <!-- 7. 核心根節點 (Central Core Node) -->
+    <circle cx="218" cy="266" r="58" fill="#ffffff" fill-opacity="0.18" />
+    <circle cx="218" cy="266" r="37" fill="#ffffff" stroke="#6ee7b7" stroke-width="8" />
+    <!-- 核心 AI 四角星芒 -->
+    <path d="M 218 245 Q 218 266 197 266 Q 218 266 218 287 Q 218 266 239 266 Q 218 266 218 245 Z" fill="#047857" />
   </g>
 </svg>
-
