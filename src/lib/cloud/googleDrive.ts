@@ -75,16 +75,25 @@ export function captureOAuthRedirectTokenIfPresent(): boolean {
 /**
  * 啟動 Google OAuth 2.0 授權彈窗取得 Google Drive (drive.file) Access Token
  */
-export function requestGoogleDriveOAuthToken(clientId: string): Promise<string> {
+export function requestGoogleDriveOAuthToken(clientId?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
       reject(new Error('瀏覽器環境不可用'));
       return;
     }
 
-    const trimmedClientId = clientId.trim();
+    const trimmedClientId = (
+      clientId ||
+      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLIENT_ID) ||
+      ''
+    ).trim();
+
     if (!trimmedClientId) {
-      reject(new Error('請先填寫 Google OAuth Client ID，或直接貼上 Access Token。'));
+      reject(
+        new Error(
+          '尚未配置 Google Client ID。請於下方「進階自訂設定」填入 Google OAuth Client ID，即可一鍵登入授權。'
+        )
+      );
       return;
     }
 

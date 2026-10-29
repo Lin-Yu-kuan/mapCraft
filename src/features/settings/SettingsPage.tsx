@@ -14,6 +14,9 @@ import {
   HardDrive,
   RefreshCw,
   Cloud,
+  ChevronDown,
+  ChevronUp,
+  LogOut,
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -89,6 +92,7 @@ export function SettingsPage() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [showAdvancedCloud, setShowAdvancedCloud] = useState(false);
 
   const hideKeyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeMeta = getProviderMeta(providerId);
@@ -352,6 +356,7 @@ export function SettingsPage() {
         });
       }
     } catch (err) {
+      setShowAdvancedCloud(true);
       setGdriveFeedback({
         type: 'error',
         text: err instanceof Error ? err.message : String(err),
@@ -410,6 +415,7 @@ export function SettingsPage() {
         });
       }
     } catch (err) {
+      setShowAdvancedCloud(true);
       setGdriveFeedback({
         type: 'error',
         text: err instanceof Error ? err.message : String(err),
@@ -902,80 +908,101 @@ export function SettingsPage() {
           </span>
         </div>
 
-        {/* 自動同步開關 */}
-        <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 cursor-pointer dark:border-slate-800 dark:bg-slate-900/40">
-          <input
-            type="checkbox"
-            checked={gdriveAutoSync}
-            onChange={(e) => void handleToggleAutoSync(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
-          <div className="text-xs">
-            <span className="font-semibold text-slate-900 dark:text-white block">
-              {t('cloud.autoSyncLabel')}
-            </span>
-            <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">
-              {t('cloud.autoSyncDesc')}
-            </span>
-          </div>
-        </label>
-
-        {/* Google OAuth Client ID 與一鍵授權 */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              {t('cloud.clientIdLabel')}
-            </label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={gdriveClientId}
-                onChange={(e) => setGdriveClientId(e.target.value)}
-                placeholder={t('cloud.clientIdPlaceholder')}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              />
+        {/* 未登入狀態：主登入按鈕與效益提示 */}
+        {!gdriveToken.trim() ? (
+          <div className="space-y-4">
+            <div>
               <button
                 type="button"
-                disabled={gdriveBusy || !gdriveClientId.trim()}
+                disabled={gdriveBusy}
                 onClick={() => void handleOAuthConnect()}
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-sky-500 hover:to-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
               >
-                <Cloud className="h-3.5 w-3.5" />
-                <span>{t('cloud.oauthConnectBtn')}</span>
+                {gdriveBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Cloud className="h-4 w-4" />
+                )}
+                <span>{t('cloud.loginGoogleBtn')}</span>
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 dark:border-sky-900/50 dark:bg-sky-950/30 space-y-2">
+              <div className="flex items-start gap-2 text-xs font-semibold text-sky-900 dark:text-sky-200">
+                <span>{t('cloud.shareBenefit')}</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {t('cloud.loginGoogleHint')}
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* 已登入狀態：帳號資訊、自動同步開關與操作 */
+          <div className="space-y-4">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30 space-y-2">
+              {gdriveUser && (
+                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  {t('cloud.connectedAs', { name: gdriveUser })}
+                </p>
+              )}
+              {lastSyncedAt && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('cloud.lastSyncedLabel', {
+                    time: new Date(lastSyncedAt).toLocaleString(),
+                  })}
+                </p>
+              )}
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                {t('cloud.shareBenefit')}
+              </p>
+            </div>
+
+            {/* 自動同步開關 */}
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 cursor-pointer dark:border-slate-800 dark:bg-slate-900/40">
+              <input
+                type="checkbox"
+                checked={gdriveAutoSync}
+                onChange={(e) => void handleToggleAutoSync(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <div className="text-xs">
+                <span className="font-semibold text-slate-900 dark:text-white block">
+                  {t('cloud.autoSyncLabel')}
+                </span>
+                <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  {t('cloud.autoSyncDesc')}
+                </span>
+              </div>
+            </label>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                disabled={gdriveBusy || cloudStatus === 'syncing'}
+                onClick={() => void handleManualSyncNow()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${
+                    cloudStatus === 'syncing' ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>{t('cloud.syncNowBtn')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleDisconnectDrive()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>{t('cloud.disconnectBtn')}</span>
               </button>
             </div>
           </div>
-
-          {/* Access Token 輸入框 */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              {t('cloud.tokenLabel')}
-            </label>
-            <input
-              type="password"
-              value={gdriveToken}
-              onChange={(e) => setGdriveToken(e.target.value.trim())}
-              placeholder={t('cloud.tokenPlaceholder')}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-            />
-          </div>
-        </div>
+        )}
 
         {/* 狀態回饋訊息 */}
-        {gdriveUser && (
-          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            {t('cloud.connectedAs', { name: gdriveUser })}
-          </p>
-        )}
-
-        {lastSyncedAt && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('cloud.lastSyncedLabel', {
-              time: new Date(lastSyncedAt).toLocaleString(),
-            })}
-          </p>
-        )}
-
         {(gdriveFeedback || cloudErrorMsg) && (
           <div
             className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${
@@ -993,48 +1020,81 @@ export function SettingsPage() {
           </div>
         )}
 
-        {/* 操作按鈕列 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800/80">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={gdriveBusy || !gdriveToken.trim()}
-              onClick={() => void handleVerifyAndSaveDrive()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50"
-            >
-              {gdriveBusy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              )}
-              <span>{t('cloud.verifyAndSaveBtn')}</span>
-            </button>
-
-            {gdriveToken.trim() && (
-              <button
-                type="button"
-                disabled={gdriveBusy || cloudStatus === 'syncing'}
-                onClick={() => void handleManualSyncNow()}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 ${
-                    cloudStatus === 'syncing' ? 'animate-spin' : ''
-                  }`}
-                />
-                <span>{t('cloud.syncNowBtn')}</span>
-              </button>
+        {/* 進階自訂設定手風琴（選填） */}
+        <div className="border-t border-slate-100 pt-3 dark:border-slate-800/80">
+          <button
+            type="button"
+            onClick={() => setShowAdvancedCloud((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+          >
+            {showAdvancedCloud ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
             )}
-          </div>
+            <span>{t('cloud.advancedSettings')}</span>
+          </button>
 
-          {gdriveToken.trim() && (
-            <button
-              type="button"
-              onClick={() => void handleDisconnectDrive()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
-            >
-              <span>{t('cloud.disconnectBtn')}</span>
-            </button>
+          {showAdvancedCloud && (
+            <div className="mt-3 space-y-3.5 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800/60 dark:bg-slate-900/40 animate-in fade-in">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {t('cloud.advancedSettingsDesc')}
+              </p>
+
+              {/* Google OAuth Client ID */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('cloud.clientIdLabel')}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={gdriveClientId}
+                    onChange={(e) => setGdriveClientId(e.target.value)}
+                    placeholder={t('cloud.clientIdPlaceholder')}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={gdriveBusy || !gdriveClientId.trim()}
+                    onClick={() => void handleOAuthConnect()}
+                    className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300 cursor-pointer"
+                  >
+                    <Cloud className="h-3.5 w-3.5" />
+                    <span>{t('cloud.oauthConnectBtn')}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Access Token 輸入框 */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('cloud.tokenLabel')}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="password"
+                    value={gdriveToken}
+                    onChange={(e) => setGdriveToken(e.target.value.trim())}
+                    placeholder={t('cloud.tokenPlaceholder')}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={gdriveBusy || !gdriveToken.trim()}
+                    onClick={() => void handleVerifyAndSaveDrive()}
+                    className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50 cursor-pointer"
+                  >
+                    {gdriveBusy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    )}
+                    <span>{t('cloud.verifyAndSaveBtn')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </section>
