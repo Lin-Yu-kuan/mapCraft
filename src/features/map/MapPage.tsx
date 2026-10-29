@@ -443,18 +443,17 @@ export function MapPage() {
         />
       </div>
 
-      {/* 底部浮動資訊列與匯出操作 */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-2">
-        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-600 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-300">
-          <span className="font-medium">
+      {/* 左上角：學習狀態與模式看板 */}
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-700 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-200">
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="font-semibold">
             {t('topbar.progressLabel', {
               done: doneCount,
               total: totalCount,
               percent,
             })}
           </span>
-          <span className="text-slate-300 dark:text-slate-700">|</span>
-          <span className="text-[11px] text-slate-400">{t('map.clickNodeHint')}</span>
         </div>
 
         {/* 順序模式切換按鈕 */}
@@ -462,24 +461,25 @@ export function MapPage() {
           type="button"
           onClick={handleToggleOrderMode}
           title={orderMode ? t('map.orderModeOn') : t('map.orderModeOff')}
-          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-xs backdrop-blur-md transition-all ${
+          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-md transition-all cursor-pointer ${
             orderMode
-              ? 'border-emerald-400 bg-emerald-50/90 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300'
+              ? 'border-emerald-400 bg-emerald-50/95 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/90 dark:text-emerald-300 ring-2 ring-emerald-500/20'
               : 'border-slate-200/90 bg-white/90 text-slate-600 hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-400'
           }`}
         >
           <ListOrdered className="h-3.5 w-3.5 text-emerald-600" />
           <span>{t('map.orderMode')}</span>
         </button>
+      </div>
 
-        {/* 匯出操作按鈕 */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleExportMarkdown}
-            aria-label={t('map.exportMarkdown')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
+      {/* 底部浮動操作：匯出與分享 */}
+      <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handleExportMarkdown}
+          aria-label={t('map.exportMarkdown')}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+        >
             <FileText className="h-3.5 w-3.5 text-emerald-600" />
             <span className="hidden sm:inline">{t('map.exportMarkdown')}</span>
             <span className="sm:hidden">Markdown</span>
@@ -529,7 +529,6 @@ export function MapPage() {
             <span className="sm:hidden">{t('share.shareBtnShort')}</span>
           </button>
         </div>
-      </div>
 
       {/* 低調慶祝橫條（全數完成時顯示） */}
       {showCelebration && (

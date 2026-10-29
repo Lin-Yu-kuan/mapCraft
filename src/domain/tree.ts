@@ -370,4 +370,39 @@ export function removeNode(root: MapNode, nodeId: string): MapNode {
   return newTree;
 }
 
+export interface PredecessorSummary {
+  role: 'parent' | 'prev_sibling';
+  label: string;
+  summary: string;
+}
+
+/**
+ * 取得當前節點的前置學習節點摘要鏈（包含直接父節點與前一個兄弟節點）
+ */
+export function getNodePredecessors(root: MapNode, nodeId: string): PredecessorSummary[] {
+  const { parent, prevSibling } = getNodeSiblings(root, nodeId);
+  const result: PredecessorSummary[] = [];
+
+  // 1. 直接父節點（若父節點不是地圖總根節點）
+  if (parent && parent.id !== root.id) {
+    result.push({
+      role: 'parent',
+      label: parent.label,
+      summary: parent.summary,
+    });
+  }
+
+  // 2. 前一個兄弟節點（循序上一課）
+  if (prevSibling) {
+    result.push({
+      role: 'prev_sibling',
+      label: prevSibling.label,
+      summary: prevSibling.summary,
+    });
+  }
+
+  return result;
+}
+
+
 

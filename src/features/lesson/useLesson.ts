@@ -10,7 +10,7 @@ import {
   BRAINSTORM_PROMPT_VERSION,
   BRAINSTORM_JSON_SCHEMA,
 } from '@/domain/prompts';
-import { findNode, getNodePath, getNodeSiblings } from '@/domain/tree';
+import { findNode, getNodePath, getNodeSiblings, getNodePredecessors } from '@/domain/tree';
 import { lessonsRepo } from '@/lib/db/repos/lessons';
 import { settingsRepo } from '@/lib/db/repos/settings';
 import { getStoredApiKey } from '@/lib/storage/settings';
@@ -111,6 +111,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
 
         const siblingLabels = getNodeSiblings(map.root, nodeId).siblings.map((s) => s.label);
         const childLabels = (currentNode.children ?? []).map((c) => c.label);
+        const predecessors = getNodePredecessors(map.root, nodeId);
 
         const promptParams = {
           mapTitle: map.title,
@@ -121,6 +122,7 @@ export function useLesson(map: LearningMap | null, nodeId: string | null): UseLe
           goal: map.options.goal,
           siblingLabels,
           childLabels,
+          predecessors,
         };
 
         const req =

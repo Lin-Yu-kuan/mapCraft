@@ -1,4 +1,7 @@
 import type { PromptRequest } from '../types';
+import type { PredecessorSummary } from '../tree';
+
+export type { PredecessorSummary };
 
 export const LESSON_PROMPT_VERSION = 'lesson.zh-TW.v2';
 
@@ -37,6 +40,7 @@ export interface LessonPromptParams {
   goal?: string;
   siblingLabels?: string[];
   childLabels?: string[];
+  predecessors?: PredecessorSummary[]; // 方案 2：前置節點摘要鏈（承先啟後脈絡）
 }
 
 export function buildLessonPrompt(params: LessonPromptParams): { system: string; user: string } {
@@ -53,12 +57,21 @@ export function buildLessonPrompt(params: LessonPromptParams): { system: string;
       ? `本節點底下的子節點：${params.childLabels.join('、')}（⚠️ 防劇透重要規則：本節點是上層導覽，請只建立高層次直覺與全貌，絕對不要提前深入解釋上述子節點的專有名詞或底層細節，把細節留給子節點！）\n`
       : '';
 
+  let predecessorsText = '';
+  if (params.predecessors && params.predecessors.length > 0) {
+    const lines = params.predecessors.map((p) => {
+      const roleName = p.role === 'parent' ? '【上層總綱】' : '【前一單元】';
+      return `  • ${roleName} ${p.label}：${p.summary}`;
+    });
+    predecessorsText = `【學習者已掌握的前置知識脈絡】：\n${lines.join('\n')}\n👉 【教學銜接指示】：請在教學開頭用 1～2 句話自然承接上述已學概念作為鋪墊，再帶出本節點的核心，讓學習流暢連貫，避免硬塞或孤立解釋專有名詞！\n\n`;
+  }
+
   const user = `學習主題：${params.mapTitle}
 ${goalText}所在路徑：${params.pathLabels}
 學習者程度：${params.level}
 當前節點：${params.nodeLabel}
 節點目標：${params.nodeSummary}
-${siblingsText}${childrenText}
+${siblingsText}${childrenText}${predecessorsText}
 請產出 JSON，包含兩個必填欄位：
 1. \`markdown\`：以 AI 認為最適合該知識點的「引導式教學」自由發揮（不限死板欄位，不要寫成八股填空）。
    - 【循序漸進、拒絕硬塞專有名詞】：先從學習者懂的日常直覺或痛點切入，不要在第一段就塞滿後面才會學到的專有名詞。
