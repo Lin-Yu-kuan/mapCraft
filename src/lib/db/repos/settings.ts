@@ -7,6 +7,18 @@ export interface AppSettings {
   lastProviderId?: string;
   lastMapModelId?: string;
   lastLessonModelId?: string;
+  /** Google OAuth 2.0 Client ID（非敏感公開識別碼） */
+  gdriveClientId?: string;
+  /** 是否啟用有網路時自動背景同步至 Google Drive */
+  gdriveAutoSync?: boolean;
+  /** Google Drive MapCraft 專屬資料夾 ID */
+  gdriveFolderId?: string;
+  /** Google Drive 雲端同步檔案 ID */
+  gdriveSyncFileId?: string;
+  /** 最後一次成功與雲端同步的時間戳記 (ms) */
+  lastSyncedAt?: number;
+  /** 本地刪除的地圖墓碑紀錄（mapId -> deletedAt），用於多裝置同步刪除 */
+  deletedMapIds?: Record<string, number>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {

@@ -13,6 +13,7 @@ import {
   Trash2,
   HardDrive,
   RefreshCw,
+  Cloud,
 } from 'lucide-react';
 import {
   getAllProviders,
@@ -29,6 +30,14 @@ import {
   type StorageMode,
 } from '@/lib/storage/settings';
 import { settingsRepo, db } from '@/lib/db';
+import {
+  getGoogleDriveToken,
+  setGoogleDriveToken,
+  clearGoogleDriveToken,
+  verifyGoogleDriveToken,
+  requestGoogleDriveOAuthToken,
+  useCloudSync,
+} from '@/lib/cloud';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -62,6 +71,24 @@ export function SettingsPage() {
   } | null>(null);
   const [customMapModel, setCustomMapModel] = useState(false);
   const [customLessonModel, setCustomLessonModel] = useState(false);
+
+  // Google Drive 雲端同步設定狀態
+  const {
+    status: cloudStatus,
+    lastSyncedAt,
+    errorMessage: cloudErrorMsg,
+    triggerSync,
+    refreshState: refreshCloudState,
+  } = useCloudSync();
+  const [gdriveClientId, setGdriveClientId] = useState('');
+  const [gdriveToken, setGdriveToken] = useState('');
+  const [gdriveAutoSync, setGdriveAutoSync] = useState(true);
+  const [gdriveUser, setGdriveUser] = useState<string | null>(null);
+  const [gdriveBusy, setGdriveBusy] = useState(false);
+  const [gdriveFeedback, setGdriveFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const hideKeyTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeMeta = getProviderMeta(providerId);
@@ -135,6 +162,11 @@ export function SettingsPage() {
         dbSettings.lastLessonModelId ||
           getDefaultModel(initialProvider, 'lesson')
       );
+
+      setGdriveClientId(dbSettings.gdriveClientId || '');
+      setGdriveAutoSync(dbSettings.gdriveAutoSync ?? true);
+      const savedDriveToken = getGoogleDriveToken();
+      setGdriveToken(savedDriveToken);
     }
     loadInitial();
   }, []);
@@ -289,6 +321,140 @@ export function SettingsPage() {
 
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 4000);
+  };
+
+  // Google OAuth 彈窗授權連結
+  const handleOAuthConnect = async () => {
+    setGdriveBusy(true);
+    setGdriveFeedback(null);
+    try {
+      await settingsRepo.saveSettings({
+        gdriveClientId: gdriveClientId.trim(),
+        gdriveAutoSync,
+      });
+      const token = await requestGoogleDriveOAuthToken(gdriveClientId);
+      setGdriveToken(token);
+      const verify = await verifyGoogleDriveToken(token);
+      if (verify.ok && verify.user) {
+        setGdriveUser(
+          verify.user.emailAddress
+            ? `${verify.user.displayName} (${verify.user.emailAddress})`
+            : verify.user.displayName
+        );
+      }
+      await refreshCloudState();
+      const synced = await triggerSync();
+      await refreshStats();
+      if (synced) {
+        setGdriveFeedback({
+          type: 'success',
+          text: t('cloud.syncSuccessMsg'),
+        });
+      }
+    } catch (err) {
+      setGdriveFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setGdriveBusy(false);
+    }
+  };
+
+  // 驗證並儲存 Google Drive Token 與自動同步設定
+  const handleVerifyAndSaveDrive = async () => {
+    setGdriveBusy(true);
+    setGdriveFeedback(null);
+    try {
+      const trimmedToken = gdriveToken.trim();
+      setGoogleDriveToken(trimmedToken);
+      await settingsRepo.saveSettings({
+        gdriveClientId: gdriveClientId.trim(),
+        gdriveAutoSync,
+      });
+
+      if (!trimmedToken) {
+        await refreshCloudState();
+        setGdriveFeedback({
+          type: 'error',
+          text: t('cloud.statusDisconnected'),
+        });
+        return;
+      }
+
+      const verify = await verifyGoogleDriveToken(trimmedToken);
+      if (!verify.ok) {
+        setGdriveFeedback({
+          type: 'error',
+          text: verify.errorMsg || t('cloud.statusError'),
+        });
+        await refreshCloudState();
+        return;
+      }
+
+      if (verify.user) {
+        setGdriveUser(
+          verify.user.emailAddress
+            ? `${verify.user.displayName} (${verify.user.emailAddress})`
+            : verify.user.displayName
+        );
+      }
+
+      await refreshCloudState();
+      const synced = await triggerSync();
+      await refreshStats();
+      if (synced) {
+        setGdriveFeedback({
+          type: 'success',
+          text: t('cloud.syncSuccessMsg'),
+        });
+      }
+    } catch (err) {
+      setGdriveFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setGdriveBusy(false);
+    }
+  };
+
+  const handleToggleAutoSync = async (checked: boolean) => {
+    setGdriveAutoSync(checked);
+    await settingsRepo.saveSettings({ gdriveAutoSync: checked });
+    await refreshCloudState();
+  };
+
+  const handleManualSyncNow = async () => {
+    setGdriveBusy(true);
+    setGdriveFeedback(null);
+    try {
+      const ok = await triggerSync();
+      await refreshStats();
+      if (ok) {
+        setGdriveFeedback({
+          type: 'success',
+          text: t('cloud.syncSuccessMsg'),
+        });
+      }
+    } finally {
+      setGdriveBusy(false);
+    }
+  };
+
+  const handleDisconnectDrive = async () => {
+    clearGoogleDriveToken();
+    setGdriveToken('');
+    setGdriveUser(null);
+    await settingsRepo.saveSettings({
+      gdriveAutoSync: false,
+      gdriveSyncFileId: undefined,
+    });
+    await refreshCloudState();
+    setGdriveFeedback({
+      type: 'success',
+      text: t('cloud.disconnectedMsg'),
+    });
   };
 
   return (
@@ -704,8 +870,177 @@ export function SettingsPage() {
         )}
       </form>
 
+      {/* Local-First Google Drive 雲端同步與備份 */}
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-950 space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
+              <Cloud className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                {t('cloud.title')}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {t('cloud.subtitle')}
+              </p>
+            </div>
+          </div>
+
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              gdriveToken.trim()
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+            }`}
+          >
+            {gdriveToken.trim()
+              ? cloudStatus === 'syncing'
+                ? t('cloud.statusSyncing')
+                : t('cloud.statusSynced')
+              : t('cloud.statusDisconnected')}
+          </span>
+        </div>
+
+        {/* 自動同步開關 */}
+        <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 cursor-pointer dark:border-slate-800 dark:bg-slate-900/40">
+          <input
+            type="checkbox"
+            checked={gdriveAutoSync}
+            onChange={(e) => void handleToggleAutoSync(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <div className="text-xs">
+            <span className="font-semibold text-slate-900 dark:text-white block">
+              {t('cloud.autoSyncLabel')}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">
+              {t('cloud.autoSyncDesc')}
+            </span>
+          </div>
+        </label>
+
+        {/* Google OAuth Client ID 與一鍵授權 */}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('cloud.clientIdLabel')}
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={gdriveClientId}
+                onChange={(e) => setGdriveClientId(e.target.value)}
+                placeholder={t('cloud.clientIdPlaceholder')}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              />
+              <button
+                type="button"
+                disabled={gdriveBusy || !gdriveClientId.trim()}
+                onClick={() => void handleOAuthConnect()}
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
+              >
+                <Cloud className="h-3.5 w-3.5" />
+                <span>{t('cloud.oauthConnectBtn')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Access Token 輸入框 */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('cloud.tokenLabel')}
+            </label>
+            <input
+              type="password"
+              value={gdriveToken}
+              onChange={(e) => setGdriveToken(e.target.value.trim())}
+              placeholder={t('cloud.tokenPlaceholder')}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-mono text-slate-900 focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            />
+          </div>
+        </div>
+
+        {/* 狀態回饋訊息 */}
+        {gdriveUser && (
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            {t('cloud.connectedAs', { name: gdriveUser })}
+          </p>
+        )}
+
+        {lastSyncedAt && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('cloud.lastSyncedLabel', {
+              time: new Date(lastSyncedAt).toLocaleString(),
+            })}
+          </p>
+        )}
+
+        {(gdriveFeedback || cloudErrorMsg) && (
+          <div
+            className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${
+              gdriveFeedback?.type === 'success' && !cloudErrorMsg
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300'
+            }`}
+          >
+            {gdriveFeedback?.type === 'success' && !cloudErrorMsg ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            )}
+            <span>{cloudErrorMsg || gdriveFeedback?.text}</span>
+          </div>
+        )}
+
+        {/* 操作按鈕列 */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={gdriveBusy || !gdriveToken.trim()}
+              onClick={() => void handleVerifyAndSaveDrive()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50"
+            >
+              {gdriveBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              <span>{t('cloud.verifyAndSaveBtn')}</span>
+            </button>
+
+            {gdriveToken.trim() && (
+              <button
+                type="button"
+                disabled={gdriveBusy || cloudStatus === 'syncing'}
+                onClick={() => void handleManualSyncNow()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${
+                    cloudStatus === 'syncing' ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>{t('cloud.syncNowBtn')}</span>
+              </button>
+            )}
+          </div>
+
+          {gdriveToken.trim() && (
+            <button
+              type="button"
+              onClick={() => void handleDisconnectDrive()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+            >
+              <span>{t('cloud.disconnectBtn')}</span>
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* T4.3 資料儲存與用量管理 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-950 space-y-5">
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-950 space-y-5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <Database className="h-5 w-5" />

@@ -1,5 +1,6 @@
 import { db } from '../db';
 import type { LearningMap } from '@/domain/types';
+import { cloudSyncManager } from '@/lib/cloud/syncManager';
 
 export const mapsRepo = {
   async getAll(): Promise<LearningMap[]> {
@@ -12,6 +13,7 @@ export const mapsRepo = {
 
   async save(map: LearningMap): Promise<string> {
     await db.maps.put(map);
+    void cloudSyncManager.notifyLocalMutation();
     return map.id;
   },
 
@@ -21,6 +23,7 @@ export const mapsRepo = {
       await db.progress.where('mapId').equals(id).delete();
       await db.lessons.where('mapId').equals(id).delete();
     });
+    void cloudSyncManager.notifyLocalMutation({ deletedMapId: id });
   },
 
   async updateTitle(id: string, title: string): Promise<void> {
@@ -29,6 +32,7 @@ export const mapsRepo = {
       map.title = title;
       map.updatedAt = Date.now();
       await db.maps.put(map);
+      void cloudSyncManager.notifyLocalMutation();
     }
   },
 };

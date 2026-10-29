@@ -13,6 +13,7 @@ import {
   FileCode,
   Network,
   ListOrdered,
+  Share2,
 } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus, MapNode } from '@/domain/types';
@@ -27,6 +28,7 @@ import { createBackupData, downloadBackupFile, downloadBlob } from '@/lib/storag
 import { LessonDrawer } from '@/features/lesson/LessonDrawer';
 import { MapCanvas } from './MapCanvas';
 import { AddSubtreeModal } from './AddSubtreeModal';
+import { ShareMapModal } from './ShareMapModal';
 
 interface OutletContextType {
   setMapInfo?: (info: { title: string; progressPercent: number; isVisible: boolean } | null) => void;
@@ -67,6 +69,9 @@ export function MapPage() {
   // 目標新增分支之節點
   const [subtreeTargetNode, setSubtreeTargetNode] = useState<MapNode | null>(null);
 
+  // 分享地圖彈窗開關
+  const [isShareOpen, setIsShareOpen] = useState(false);
+
   // 1. 載入地圖與進度
   useEffect(() => {
     let isMounted = true;
@@ -103,8 +108,23 @@ export function MapPage() {
 
     loadData();
 
+    const handleCloudSynced = () => {
+      if (!id) return;
+      void (async () => {
+        const latestMap = await mapsRepo.getById(id);
+        const latestProgress = await progressRepo.getByMapId(id);
+        if (isMounted && latestMap) {
+          setMap(latestMap);
+          setProgressList(latestProgress);
+        }
+      })();
+    };
+
+    window.addEventListener('mapcraft:cloud-synced', handleCloudSynced);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('mapcraft:cloud-synced', handleCloudSynced);
       setMapInfo?.(null);
     };
   }, [id, setMapInfo]);
@@ -498,6 +518,17 @@ export function MapPage() {
             <span className="hidden sm:inline">{t('map.exportBackup')}</span>
             <span className="sm:hidden">備份</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            aria-label={t('share.shareBtn')}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-colors"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('share.shareBtn')}</span>
+            <span className="sm:hidden">{t('share.shareBtnShort')}</span>
+          </button>
         </div>
       </div>
 
@@ -559,6 +590,14 @@ export function MapPage() {
           onSubtreeAdded={handleSubtreeAdded}
         />
       )}
+
+      {/* 分享地圖彈窗（方案 B 網址直接分享 + 方案 A Google Drive 雲端分享） */}
+      <ShareMapModal
+        map={map}
+        progressList={progressList}
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+      />
     </div>
   );
 }

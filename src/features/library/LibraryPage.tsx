@@ -78,6 +78,13 @@ export function LibraryPage() {
 
   useEffect(() => {
     loadMaps();
+    const handleCloudSynced = () => {
+      void loadMaps();
+    };
+    window.addEventListener('mapcraft:cloud-synced', handleCloudSynced);
+    return () => {
+      window.removeEventListener('mapcraft:cloud-synced', handleCloudSynced);
+    };
   }, [loadMaps]);
 
   // 搜尋過濾

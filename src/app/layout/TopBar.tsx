@@ -1,9 +1,24 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Settings, FolderKanban, Languages, Sun, Moon, Download, Info, X } from 'lucide-react';
+import {
+  Compass,
+  Settings,
+  FolderKanban,
+  Languages,
+  Sun,
+  Moon,
+  Download,
+  Info,
+  X,
+  Cloud,
+  CloudOff,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 import { useTheme } from '../themeContext';
 import { usePwaInstall } from '@/shared';
+import { useCloudSync } from '@/lib/cloud';
 
 interface TopBarProps {
   mapTitle?: string;
@@ -15,6 +30,7 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
   const location = useLocation();
   const { actualTheme, toggleTheme } = useTheme();
   const { canInstall, isStandalone, isAppleDevice, promptInstall } = usePwaInstall();
+  const { status: syncStatus, isConnected, triggerSync, errorMessage } = useCloudSync();
   const [showMacGuide, setShowMacGuide] = useState(false);
 
   const toggleLanguage = () => {
@@ -69,6 +85,48 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
 
         {/* 右側：導覽與工具 */}
         <div className="flex items-center gap-2">
+          {/* 雲端同步狀態指示器（已連結 Google Drive 時顯示，點擊可立即雙向同步） */}
+          {isConnected && (
+            <button
+              type="button"
+              onClick={() => void triggerSync()}
+              disabled={syncStatus === 'syncing'}
+              title={
+                errorMessage ||
+                (syncStatus === 'syncing'
+                  ? t('cloud.statusSyncing')
+                  : syncStatus === 'offline'
+                    ? t('cloud.statusOffline')
+                    : t('cloud.statusSynced'))
+              }
+              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors ${syncStatus === 'error'
+                  ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300'
+                  : syncStatus === 'offline'
+                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300'
+                    : 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300'
+                }`}
+            >
+              {syncStatus === 'syncing' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : syncStatus === 'offline' ? (
+                <CloudOff className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : syncStatus === 'error' ? (
+                <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              <span className="hidden lg:inline">
+                {syncStatus === 'syncing'
+                  ? t('cloud.statusSyncing')
+                  : syncStatus === 'offline'
+                    ? t('cloud.statusOffline')
+                    : syncStatus === 'error'
+                      ? t('cloud.statusError')
+                      : t('cloud.statusSynced')}
+              </span>
+            </button>
+          )}
+
           {/* PWA 安裝按鈕：僅在非 standalone 獨立視窗模式下顯示 */}
           {!isStandalone && (
             <button
@@ -85,11 +143,10 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
 
           <Link
             to="/library"
-            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-              isLibraryActive
+            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${isLibraryActive
                 ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
-            }`}
+              }`}
             aria-label={t('topbar.libraryAria')}
           >
             <FolderKanban className="h-4 w-4" aria-hidden="true" />
@@ -98,11 +155,10 @@ export function TopBar({ mapTitle, progressPercent }: TopBarProps) {
 
           <Link
             to="/settings"
-            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-              isSettingsActive
+            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${isSettingsActive
                 ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
-            }`}
+              }`}
             aria-label={t('topbar.settingsAria')}
           >
             <Settings className="h-4 w-4" aria-hidden="true" />

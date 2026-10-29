@@ -2,7 +2,9 @@ import { db } from '../db/db';
 import { settingsRepo } from '../db/repos/settings';
 import { BACKUP_FORMAT, BACKUP_EXTENSION } from './keys';
 import { BackupSchema, type BackupData } from '@/domain/schemas';
+import type { SharePayload } from '@/domain/share';
 import type { LearningMap, NodeProgress, Lesson } from '@/domain/types';
+import { cloudSyncManager } from '../cloud/syncManager';
 
 /**
  * 金鑰特徵掃描正則（SPEC AC-07 安全斷言）
@@ -135,11 +137,49 @@ export async function importBackupData(
     }
   });
 
+  void cloudSyncManager.notifyLocalMutation();
+
   return {
     mapsImported: mapsToInsert.length,
     progressImported: progressToInsert.length,
     lessonsImported: lessonsToInsert.length,
   };
+}
+
+/**
+ * 將透過網址或 Google Drive 分享的學習地圖儲存至使用者本機地圖庫
+ * 若本機已存在相同 ID 的地圖，會分配新 ID 以避免覆蓋使用者原有地圖
+ */
+export async function saveSharedPayloadToLocal(payload: SharePayload): Promise<string> {
+  const existing = await db.maps.get(payload.map.id);
+  const now = Date.now();
+  const targetMapId = existing
+    ? typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `map_${now}_${Math.random().toString(36).substring(2, 9)}`
+    : payload.map.id;
+
+  const mapToSave: LearningMap = {
+    ...payload.map,
+    id: targetMapId,
+    updatedAt: now,
+  };
+
+  const lessonsToSave: Lesson[] = (payload.lessons || []).map((l) => ({
+    ...l,
+    mapId: targetMapId,
+  }));
+
+  await db.transaction('rw', db.maps, db.lessons, async () => {
+    await db.maps.put(mapToSave);
+    if (lessonsToSave.length > 0) {
+      await db.lessons.bulkPut(lessonsToSave);
+    }
+  });
+
+  void cloudSyncManager.notifyLocalMutation();
+
+  return targetMapId;
 }
 
 /**
