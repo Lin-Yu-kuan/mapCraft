@@ -1,12 +1,18 @@
 # MapCraft — Vibe Coding 開發規格書
 
-> 文件版本：v1.2 ｜ 撰寫日：2026-10-26 ｜ 狀態：可交付 AI coding agent 實作
+> 文件版本：v1.3 ｜ 撰寫日：2026-10-29 ｜ 狀態：可交付 AI coding agent 實作
 > 產品名稱：**MapCraft** ｜ 中文名：**地圖工坊**
 > Tagline：*AI drafts the map. You craft the learning.*（AI 起稿，你來完成。）
 > 授權：MIT（開源）｜ 語言：繁體中文優先（zh-TW），支援 zh-CN / en
 >
 > **v1.1 變更**：補上「合成根節點」與「節點 id 由本地配發」兩項實作慣例（§4.2）；新增 §14 快速開始與最小可交付範圍。
 > **v1.2 變更**：專案定名 MapCraft（§1.5 品牌規範）；備份格式改為 `mapcraft.backup`；新增「識別字凍結表」（§4.5），明確區分「可改的品牌」與「不可改的識別字」。
+> **v1.3 變更**：
+> 1. 節點教學抽屜升級為 `lesson.zh-TW.v2`「引導式自由教學（`markdown`）＋必備隨堂測驗（`quiz`）」，支援分段推導、生活化比喻、Markdown 比較表格與 ASCII 圖解（` ```diagram `），並向下相容 v1 五段式欄位；同時支援「學習模式」與「腦力激盪模式」（FR-04、§4.2、§5.4）。
+> 2. 主題輸入表單移除「可用總學習時間」，新增「目前熟悉程度補充說明（`levelDescription`）」（FR-02、§4.2）。
+> 3. 停用並移除 WebGPU 本地模型與 `@mlc-ai/web-llm` 依賴，大幅縮減打包體積。
+> 4. 實作跨平台 PWA 桌面版安裝（Windows Chrome/Edge 原生安裝提示 ＋ Mac Safari「加入 Dock」指引彈窗）與 Service Worker 離線快取（FR-11）。
+> 5. 實作「本地優先（Local-First）Google Drive 自動背景雙向同步」與「雙軌地圖分享（方案 B 原生 Deflate 網址直接分享 ＋ 方案 A Google Drive 雲端分享）」（FR-10）。
 
 ---
 
@@ -90,15 +96,15 @@
 ### 2.1 核心使用者旅程（四步）
 
 ```
-[1] 輸入主題 / 程度 / 目標 / 時間預算
+[1] 輸入主題 / 程度（含背景補充說明） / 學習目標
         ↓（帶入自備 Key：OpenAI / Gemini / Anthropic / DeepSeek / OpenRouter / Ollama）
 [2] LLM 輸出嚴格 JSON 樹狀結構（Zod 驗證通過才渲染）
         ↓
-[3] 互動心智圖（縮放 / 拖曳 / 展開收合 / 自動佈局）
+[3] 互動心智圖（縮放 / 拖曳 / 展開收合 / 自動佈局 / 新增或刪除子分支）
         ↓（點擊節點觸發微學習，內容按需生成並快取）
-[4] 側邊抽屜：白話解釋 → 實戰範例 → 常見誤解 → 隨堂測驗 → 標記完成
+[4] 側邊抽屜：引導式自由教學（比喻 / 表格 / 架構圖解 / 範例） → 隨堂測驗 → 標記完成
         ↓
-[5] 節點變色打勾、頂部完成度更新、資料留在本機、可匯出
+[5] 節點變色打勾、頂部完成度更新、Local-First 秒存本機並自動背景同步 Google Drive、可一鍵分享或匯出
 ```
 
 ### 2.2 功能需求（FR）
@@ -126,15 +132,15 @@
 
 #### FR-02 主題輸入與地圖生成（P0）
 
-輸入區欄位：**主題**（必填）、目前程度（初學/略懂/進階）、學習目標（自由文字）、可用總時數、語言（預設跟隨 UI）。
+輸入區欄位：**主題**（必填）、目前熟悉程度（初學/略懂/進階）＋**程度補充說明（`levelDescription`，選填自由文字，例如已具備之背景經驗）**、學習目標（自由文字）。（註：已移除「可用總學習時間」欄位以簡化輸入體驗）。
 
 生成參數（可收合，有預設值）：
 
 | 參數 | 預設 | 範圍 |
 |---|---|---|
 | 深度 `maxDepth` | 3 | 2–5 |
-| 每層廣度 `maxBreadth` | 5 | 2–8 |
-| 總節點上限 `maxNodes` | 30 | 8–60 |
+| 每層廣度 `maxBreadth` | 4 | 2–8 |
+| 總節點上限 `maxNodes` | 25 | 8–60 |
 | 創意度 `temperature` | 0.4 | 0–1 |
 
 **流程**：送出 → 顯示骨架與「正在規劃學習路徑…」→ 呼叫 `mapModel` → 解析 JSON → Zod 驗證 → 失敗則自動修復重試 1 次（§5.6）→ 成功則存 DB 並導向地圖頁。
@@ -161,30 +167,29 @@
 
 #### FR-04 節點教學抽屜（P0）
 
-點節點 → 右側抽屜（桌機 480px 寬；行動裝置全螢幕）。
+點節點 → 右側抽屜（桌機預設 480px 寬，支援拖曳調整寬度 380px–900px；行動裝置全螢幕）。
 
-抽屜內容分區（依序渲染，可分段載入）：
+抽屜內容模式與結構：
 
-1. **這是什麼**：白話解釋（150–400 字）。
-2. **為什麼重要 / 解決什麼問題**：1–3 句。
-3. **實戰範例**：情境 + 程式碼或操作步驟（若有）。
-4. **常見誤解**：2–4 條。
-5. **重點回顧**：3–5 條 bullet。
-6. **隨堂測驗**（P1 完整互動；P0 先顯示題目與解析）。
-7. **底部操作列**：`重新生成`、`標記為進行中/已完成`、`複製 Markdown`、`前往父/子節點`。
+1. **學習模式（`lesson.zh-TW.v2` 引導式自由教學 + 向下相容 v1）**：
+   - **引導式自由教學筆記（`markdown`）**：不再強制死板五段式填空，由 AI 導師依知識點特性自由編排最適合的教學結構，包含：清晰的段落與小標題（`###`）、生活化比喻、Markdown 比較表格、文字架構/流程圖解（` ```diagram ` 區塊）、可複製程式碼範例，且嚴格禁止超前拋出後續節點才教的專有名詞。
+   - **隨堂測驗（`quiz`）**：每個學習節點必備 4 選 1 互動單選題，點選後即時回饋正解與詳細解析。
+   - *向下相容*：若舊版備份或快取為 v1 格式（`concept` / `why` / `example` / `pitfalls` / `keyPoints`），UI 仍可完整渲染。
+2. **腦力激盪模式（`brainstorm.zh-TW.v1`）**：
+   - 結構化呈現：`💡 核心創意（coreIdea）`、`🎯 應用情境（useCases）`、`⚠️ 潛在挑戰（challenges）`、`🚀 下一步行動（nextSteps）`。
+3. **頂部/底部操作列**：`重新生成`、`標記為進行中/已完成`、`複製 Markdown`、`新增子分支`、`刪除節點`、`前往父/子/兄弟節點`。
 
 規則：
-- 首次點擊才呼叫 API（**On-demand**），命中快取則 0 成本直出。
-- 串流顯示（SSE），首字元 < 3 秒（正常網路）；可「停止生成」。
+- 首次點擊並確認生成才呼叫 API（**On-demand**），命中快取則 0 成本直出。
+- 順序學習導引（Order Mode）：若前置父節點或前一個兄弟節點尚未生成筆記，會跳出軟性提醒橫幅（「前置節點尚未生成筆記」）；**當使用者切換至其他節點時，此提醒橫幅必須自動取消重置，不殘留於新節點**。
 - 內容底部標註：`AI 生成 · {model} · {timestamp} · 請自行查證`。
-- 每個節點可重新生成（覆蓋快取，需確認）。
-- 生成中若關閉抽屜，請求可繼續但結果仍寫入快取 `[建議]`。
+- 每個節點可重新生成（覆蓋快取）。
 
 **驗收條件 AC-04**
 - Given 第二次點同一節點，Then 不再發出 API 請求（可由 devtools 驗證）。
-- Given 串流中按停止，Then 保留已生成內容並標記「未完成」。
+- Given 串流/生成中按停止，Then 可立即中止請求。
 - Given AI 回傳含 Markdown/HTML，Then 只渲染白名單元素（§7.3），不執行任何 script。
-- Given 使用者切換節點，Then 抽屜內容切換且不殘留上一節點內容。
+- Given 使用者切換節點，Then 抽屜內容切換、前置提醒橫幅自動清除，且不殘留上一節點內容。
 
 #### FR-05 學習進度（P0）
 
@@ -209,37 +214,43 @@
 | 格式 | 內容 | 優先級 |
 |---|---|---|
 | `.mapcraft.json` | 地圖樹 + 進度 + 教材快取（不含金鑰） | P0 |
-| Markdown | 標題階層 + 各節點重點（可選含教材全文） | P0（基本） |
-| OPML | 供 XMind / MindNode 匯入 | P1 |
-| PNG / SVG | 畫布快照 | P1 |
+| Markdown (`.md`) | 標題階層 + 各節點完整教材筆記與隨堂測驗 | P0 |
+| HTML 互動手冊 (`.html`) | 單一獨立離線 HTML（含左側樹狀導覽、完整筆記與列印樣式） | P1（已實作） |
+| OPML (`.opml`) | 供 XMind / MindNode / Logseq 匯入 | P1（已實作） |
 | 匯入 | 支援 `.mapcraft.json`，ID 衝突時重新配發 | P0 |
 
 **驗收條件 AC-07**
 - 匯出檔可被同版本重新匯入且進度一致。
-- 匯出檔中**不存在**任何 `sk-`、`AIza`、`Bearer` 或使用者輸入過的 Key 字串（單元測試以 regex 掃描）。
+- 匯出檔中**不存在**任何 `sk-`、`AIza`、`ya29.`、`Bearer` 或使用者輸入過的 Key 字串（單元測試以 regex 掃描）。
 
 #### FR-08 資料管理（P0）
 
-- 顯示各 store 的資料量（地圖數、教材數、估算 KB）。
+- 顯示各 store 的資料量（地圖數、進度數、教材數）。
 - 「清除所有教材快取」「清除所有資料」兩個獨立操作，皆需確認。
 - 一鍵匯出備份。
 
 #### FR-09 隨堂測驗（P1）
 
-- 4 選 1、選項隨機排序（避免位置記憶）。
-- 作答後顯示正解與解析；記錄 `attempts / correct`。
-- 答錯可「請 AI 用更簡單的方式再解釋一次」（額外一次呼叫）。
+- 4 選 1 單選題。
+- 作答後即時顯示正解狀態與詳細解析；記錄 `attempts / correct`。
 
-#### FR-10 分享地圖（P1）
+#### FR-10 分享地圖與 Local-First Google Drive 雲端同步（P1，已實作）
 
-- 將「地圖骨架（不含教材、不含進度、不含 Key）」以 lz-string 壓縮成 URL hash。
-- 分享頁顯示「匯入這張地圖」按鈕。
-- 超過 8KB 時改為提供 `.json` 下載並提示。
+1. **本地優先（Local-First）自動背景同步**：
+   - 平常所有讀寫 100% 在本機 IndexedDB 立即完成，絕不阻塞 UI。
+   - 使用者於設定頁連結個人 Google Drive（採用最小權限 `drive.file`，僅存取 `MapCraft` 資料夾）後，本地任何變更會防抖（2.5 秒）在背景自動與雲端雙向合併同步。
+   - 支援無衝突聯集（Union）、同 ID 最後修改優先（Last-Write-Wins），以及刪除墓碑（`deletedMapIds`）防止已刪除地圖復活；離線時排入待同步佇列，恢復連線後自動同步。
+2. **雙軌地圖分享**：
+   - **方案 B（網址直接分享）**：使用瀏覽器原生 `CompressionStream('deflate-raw')` + URL-Safe Base64 將地圖（及安全長度內的教材）編碼為 `#/share?data=...` 網址，零第三方套件依賴。超過網址安全長度上限時自動退回僅分享地圖骨架與進度。
+   - **方案 A（Google Drive 雲端分享）**：將包含 30+ 節點完整教材的地圖上傳至使用者 Google Drive `MapCraft` 資料夾並設為公開唯讀，產出 `#/share?gdrive=<fileId>` 分享連結。
+   - **分享預覽頁（`SharedMapPage`）**：開啟分享連結即可免登入直接預覽互動畫布與隨附教材，並提供「＋ 儲存至我的地圖庫」按鈕一鍵匯入本機。
 
-#### FR-11 PWA／離線（P1）
+#### FR-11 PWA／離線與跨平台桌面版（P1，已實作）
 
-- 可安裝、Service Worker 快取 App shell。
-- 離線時可瀏覽已生成的地圖與教材；未生成的節點顯示「需要連線」。
+- 提供標準 `manifest.json`、高畫質向量圖示（`icon-192.svg` / `icon-512.svg`）與 Service Worker（`sw.js`）快取 App Shell（外部 LLM 與 Google Drive API 請求一律直通網路不快取）。
+- TopBar 提供「**安裝桌面版**」按鈕：
+  - **Windows (Chrome / Edge)**：攔截 `beforeinstallprompt` 一鍵喚起系統原生桌面安裝。
+  - **Mac (Safari)**：自動偵測 Apple 裝置並彈出「檔案 → 加入 Dock」桌面安裝指引；已處於 `standalone` 視窗模式時自動隱藏安裝按鈕。
 
 #### FR-12 複習排程（P2）
 
@@ -307,28 +318,32 @@ mapcraft/
 ├─ README.md                      # 對人類：特色、截圖、如何自架、隱私聲明
 ├─ CONTRIBUTING.md
 ├─ LICENSE                        # MIT
-├─ index.html                     # 含 CSP meta
+├─ index.html                     # 含 CSP meta 與 PWA manifest 連結
 ├─ vite.config.ts
-├─ tailwind.config / CSS 變數
 ├─ public/
-│  ├─ _headers                   # Cloudflare Pages 用 CSP
-│  └─ icons/
+│  ├─ _headers                    # Cloudflare Pages 用 CSP
+│  ├─ manifest.json               # PWA Web App Manifest
+│  ├─ sw.js                       # PWA Service Worker（靜態快取、API 直通）
+│  └─ icons/                      # PWA 向量圖示（192x192 / 512x512）
 └─ src/
    ├─ main.tsx / App.tsx
    ├─ app/
-   │  ├─ router.tsx
+   │  ├─ router.tsx               # HashRouter（含 /share 分享預覽路由）
    │  ├─ providers.tsx            # QueryClient / i18n / Theme / ErrorBoundary
-   │  └─ layout/{TopBar,SideNav,ProgressBar}.tsx
+   │  └─ layout/{Layout,TopBar,ProgressBar}.tsx
    ├─ domain/
    │  ├─ types.ts                 # §4.2 型別（權威）
    │  ├─ schemas.ts               # Zod：MapSchema / LessonSchema / QuizSchema / BackupSchema
-   │  ├─ tree.ts                  # flatten/walk/find/reparent/countLeaves/maxDepth
-   │  ├─ progress.ts              # computeProgress, setStatus, orphanCleanup
+   │  ├─ tree.ts                  # flatten/walk/find/addChildNodes/removeNode
    │  ├─ layout.ts                # d3-hierarchy → {x,y}（純函式，可測）
+   │  ├─ share.ts                 # 方案 B：原生 Deflate 網址分享壓縮編解碼（純函式）
+   │  ├─ sync.ts                  # Local-First 雲端同步雙向合併與墓碑演算法（純函式）
+   │  ├─ export/{html,markdown,opml}.ts
    │  └─ prompts/
    │     ├─ map.zh-TW.ts
-   │     ├─ lesson.zh-TW.ts
-   │     ├─ quiz.zh-TW.ts
+   │     ├─ subtree.zh-TW.ts
+   │     ├─ lesson.zh-TW.ts       # v2 引導式自由教學 + 隨堂測驗
+   │     ├─ brainstorm.zh-TW.ts   # 腦力激盪模式框架
    │     └─ repair.ts
    ├─ lib/
    │  ├─ llm/
@@ -339,26 +354,29 @@ mapcraft/
    │  │  ├─ google.ts
    │  │  ├─ json.ts               # 抽取/修復 JSON
    │  │  ├─ errors.ts             # 正規化錯誤 → 使用者可讀訊息
-   │  │  └─ redact.ts             # 金鑰遮罩（log/錯誤/匯出全靠它）
+   │  │  └─ redact.ts             # 金鑰與 OAuth Token 遮罩
+   │  ├─ cloud/
+   │  │  ├─ googleDrive.ts        # 方案 A：Google Drive REST API v3 & OAuth 2.0
+   │  │  ├─ syncManager.ts        # Local-First 自動背景雙向同步引擎
+   │  │  └─ useCloudSync.ts       # 雲端同步狀態訂閱 Hook
    │  ├─ db/
    │  │  ├─ db.ts                 # Dexie schema + 版本
-   │  │  └─ repos/{maps,progress,lessons,settings}.ts
-   │  ├─ storage/settings.ts      # localStorage/session/memory 三模式
-   │  ├─ i18n/{index.ts, zh-TW.json, zh-CN.json, en.json}
-   │  └─ telemetry/noop.ts        # P1：opt-in 介面預留
+   │  │  ├─ demoCraft.ts          # 內建免金鑰 TypeScript 示範地圖
+   │  │  └─ repos/{maps,progress,lessons,settings,cleanup}.ts
+   │  ├─ storage/{keys,settings,backup}.ts
+   │  └─ i18n/{index.ts, zh-TW.json, en.json}
    ├─ features/
-   │  ├─ generation/              # 主題表單、參數、生成流程
-   │  ├─ map/                     # Canvas, NodeCard, Edge, Minimap, Controls, Toolbar
-   │  ├─ lesson/                  # LessonDrawer, sections, StreamingText
-   │  ├─ quiz/
-   │  ├─ library/
-   │  └─ settings/
+   │  ├─ generation/              # 主題表單、程度補充說明、參數、生成流程
+   │  ├─ map/                     # MapPage, MapCanvas, NodeCard, AddSubtreeModal, ShareMapModal, SharedMapPage
+   │  ├─ lesson/                  # LessonDrawer, useLesson
+   │  ├─ library/                 # LibraryPage
+   │  └─ settings/                # SettingsPage（BYOK + Google Drive 雲端同步 + 資料管理）
    ├─ shared/
-   │  ├─ ui/                      # Button, Dialog, Drawer, Toast, Skeleton, Progress
-   │  └─ hooks/                   # useMediaQuery, useHotkeys, usePersist
+   │  ├─ components/SafeMarkdown.tsx
+   │  └─ hooks/usePwaInstall.ts
    └─ test/
       ├─ fixtures/{map.small.json, map.bad.json, lesson.json}
-      └─ msw/handlers.ts
+      └─ msw/{handlers,server}.ts
 ```
 
 ### 3.4 技術選型與理由
@@ -423,8 +441,9 @@ export interface GenerationOptions {
   maxNodes: number;
   temperature: number;
   level: Level;
+  levelDescription?: string; // 使用者補充說明自身背景與熟悉程度
   goal?: string;
-  timeBudgetHours?: number;
+  timeBudgetHours?: number;  // 選填向下相容欄位（UI 已移除）
   language: 'zh-TW' | 'zh-CN' | 'en';
 }
 
@@ -457,18 +476,24 @@ export interface Lesson {
   nodeId: string;
   schemaVersion: 1;
   modelId: string;
-  promptVersion: string;   // 例如 "lesson.zh-TW.v1"
+  promptVersion: string;   // 例如 "lesson.zh-TW.v2" 或 "brainstorm.zh-TW.v1"
+  mode?: NodeMode;
   content: LessonContent;
+  brainstormContent?: BrainstormContent;
   createdAt: number;
   partial?: boolean;       // 使用者中途停止
 }
 
 export interface LessonContent {
-  concept: string;         // Markdown 150–400 字
-  why: string;
+  /** v2 引導式自由教學筆記（Markdown 格式：支援分段、生活化比喻、表格、圖解、程式碼） */
+  markdown?: string;
+  /** 向下相容舊版（v1）五段式欄位 */
+  concept?: string;
+  why?: string;
   example?: { scenario: string; code?: string; language?: string; explain: string };
-  pitfalls: string[];
-  keyPoints: string[];
+  pitfalls?: string[];
+  keyPoints?: string[];
+  /** 每個節點必備的隨堂測驗 */
   quiz?: Quiz;
 }
 
@@ -659,32 +684,24 @@ export interface LLMProvider {
 4. 去重：`label` 正規化後重複者合併（保留第一個）。
 5. 保底：若最終節點數 < 3，視為失敗並走修復流程。
 
-### 5.4 節點教學契約
+### 5.4 節點教學契約（`lesson.zh-TW.v2`）
 
-輸出 **Markdown 的 JSON 欄位**（結構化，方便分區渲染與快取），schema：
+輸出 **引導式自由教學 Markdown + 必備隨堂測驗** 的 JSON 結構（本地 Zod 同時向下相容 v1 五段式欄位）：
 
 ```json
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["concept", "why", "pitfalls", "keyPoints"],
+  "required": ["markdown", "quiz"],
   "properties": {
-    "concept":  { "type": "string", "minLength": 60, "maxLength": 1200 },
-    "why":      { "type": "string", "minLength": 10, "maxLength": 300 },
-    "example": {
-      "type": "object", "additionalProperties": false,
-      "required": ["scenario", "explain"],
-      "properties": {
-        "scenario": { "type": "string" },
-        "code":     { "type": ["string", "null"] },
-        "language": { "type": ["string", "null"] },
-        "explain":  { "type": "string" }
-      }
+    "markdown": {
+      "type": "string",
+      "minLength": 50,
+      "maxLength": 6000
     },
-    "pitfalls": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } },
-    "keyPoints":{ "type": "array", "minItems": 3, "maxItems": 5, "items": { "type": "string" } },
     "quiz": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["question", "options", "answerIndex", "explanation"],
       "properties": {
         "question":    { "type": "string" },
@@ -697,8 +714,7 @@ export interface LLMProvider {
 }
 ```
 
-- 串流策略：**文字串流 + 最後組合**（見 §5.6）。若 provider 只能一次性輸出，改用 loading skeleton（可接受）。
-- 長度硬限：`concept` 1200 字元上限可避免「一次塞爆」，超過即截斷並提示。
+- **教學設計原則**：禁止死板八股填空與超前專有名詞轟炸；AI 導師依知識點自由運用分段小標題（`###`）、生活化比喻、Markdown 比較表格、ASCII 流程架構圖（` ```diagram `）與程式碼範例進行引導。
 
 ### 5.5 Prompt 版本與快取鍵
 
@@ -1038,8 +1054,8 @@ export interface LLMProvider {
 <<<LEARNER_INPUT
 主題：{{topic}}
 目前程度：{{level}}（beginner=完全沒接觸 / some=看過文章 / advanced=做過專案）
+程度補充說明：{{levelDescription}}
 學習目標：{{goal}}
-可用總時間：{{timeBudgetHours}} 小時
 語言：繁體中文（台灣用語）
 LEARNER_INPUT>>>
 
@@ -1060,12 +1076,13 @@ JSON Schema：
 {{schema}}
 ```
 
-**A-2 節點教學（`lesson.zh-TW.v1`）**
+**A-2 節點教學（`lesson.zh-TW.v2`）**
 
 ```
 [System]
-你是使用繁體中文（台灣用語）的專業導師。你的任務是讓一個非專家在 3 分鐘內真正理解一個知識點。
-你只輸出 JSON。不得出現簡體字。專有名詞第一次出現時附上英文原文。
+你是使用繁體中文（台灣用語）的頂尖引導式教學導師。
+你的任務是採用「最適合該知識點的引導式教學法」，讓學習者循序漸進、毫無痛感地真正理解這個節點。
+你只輸出符合指定結構的 JSON，不得出現簡體字。專有名詞第一次出現時附上英文原文。
 
 [User]
 學習主題：{{mapTitle}}
@@ -1075,14 +1092,11 @@ JSON Schema：
 知識點摘要：{{nodeSummary}}
 
 請產出以下欄位（皆為繁體中文）：
-- concept：150–400 字白話解釋。先用一句話定義，再說明運作原理，最後說明「什麼時候會用到」。
-- why：1–3 句，說明它解決了什麼問題、不學它會遇到什麼麻煩。
-- example：一個貼近實務的情境；若有程式碼，code 放程式碼（不含 markdown 圍欄），language 填語言名稱；explain 說明這段範例的重點。
-- pitfalls：2–4 條新手最常搞錯的地方（每條一句話，具體、不要空泛）。
-- keyPoints：3–5 條可背誦的重點。
-- quiz：一題四選一的單選題，測「是否真的理解」而非背誦；answerIndex 為正解索引（0–3）；explanation 說明為何其他選項錯。
-
-限制：不要超過 1200 字；不要重複 concept 的內容到 keyPoints；不要提供需付費才能驗證的資訊。
+- markdown：引導式自由教學筆記（Markdown 格式）。請拋棄死板公式，依知識點特性自由運用：
+  1. 清晰的段落與小標題（###），嚴禁把所有文字擠成一大段。
+  2. 嚴格控制認知負荷，禁止超前拋出後續節點才教的專有名詞。
+  3. 善用生活化比喻、Markdown 比較表格、文字架構/流程圖解（```diagram 區塊）與實戰範例。
+- quiz：必備的一題四選一單選題，測驗「是否真正理解觀念」而非死背；answerIndex 為正解索引（0–3）；explanation 說明為何正解正確及其他選項為何錯。
 
 JSON Schema：
 {{schema}}
