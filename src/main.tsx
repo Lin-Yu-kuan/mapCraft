@@ -18,8 +18,15 @@ createRoot(rootElement).render(
 // 註冊 PWA Service Worker
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      // ignore registration error
-    });
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then((reg) => {
+        reg.update().catch(() => {
+          // ignore update check error
+        });
+      })
+      .catch(() => {
+        // ignore registration error
+      });
   });
 }

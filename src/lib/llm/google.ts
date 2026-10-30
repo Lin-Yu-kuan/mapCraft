@@ -17,6 +17,8 @@ const DEFAULT_GEMINI_BASE_URL =
   'https://generativelanguage.googleapis.com/v1beta';
 const VERTEX_EXPRESS_BASE_URL =
   'https://aiplatform.googleapis.com/v1beta1/publishers/google';
+const VERTEX_EXPRESS_V1_BASE_URL =
+  'https://aiplatform.googleapis.com/v1/publishers/google';
 
 const DEFAULT_VERTEX_MODELS = [
   'gemini-2.5-flash',
@@ -121,7 +123,12 @@ export class GoogleGeminiProvider implements LLMProvider {
     return base;
   }
 
-  protected getEndpointUrl(stream = false, overrideBaseUrl?: string): string {
+  protected getEndpointUrl(
+    stream = false,
+    overrideBaseUrl?: string,
+    overrideModel?: string,
+    appendKeyParam = false
+  ): string {
     let base: string;
     if (overrideBaseUrl) {
       base = this.formatBaseUrl(overrideBaseUrl);
@@ -131,12 +138,37 @@ export class GoogleGeminiProvider implements LLMProvider {
       base = this.formatBaseUrl(this.options.baseUrl);
     }
 
-    const model = encodeURIComponent(this.normalizeModelId(this.options.model));
+    const model = encodeURIComponent(
+      this.normalizeModelId(overrideModel || this.options.model)
+    );
+    const key = this.options.apiKey ? this.options.apiKey.trim() : '';
 
     if (stream) {
-      return `${base}/models/${model}:streamGenerateContent?alt=sse`;
+      const keyQuery =
+        appendKeyParam && key ? `&key=${encodeURIComponent(key)}` : '';
+      return `${base}/models/${model}:streamGenerateContent?alt=sse${keyQuery}`;
     }
-    return `${base}/models/${model}:generateContent`;
+
+    const keyQuery =
+      appendKeyParam && key ? `?key=${encodeURIComponent(key)}` : '';
+    return `${base}/models/${model}:generateContent${keyQuery}`;
+  }
+
+  protected getCandidateUrls(stream = false, overrideModel?: string): string[] {
+    const primary = this.getEndpointUrl(stream, undefined, overrideModel, false);
+    if (!this.isAqKey()) {
+      return [primary];
+    }
+
+    const candidates = [
+      primary,
+      this.getEndpointUrl(stream, VERTEX_EXPRESS_BASE_URL, overrideModel, true),
+      this.getEndpointUrl(stream, VERTEX_EXPRESS_V1_BASE_URL, overrideModel, true),
+      this.getEndpointUrl(stream, DEFAULT_GEMINI_BASE_URL, overrideModel, false),
+      this.getEndpointUrl(stream, DEFAULT_GEMINI_BASE_URL, overrideModel, true),
+    ];
+
+    return Array.from(new Set(candidates));
   }
 
   protected getHeaders(): Record<string, string> {
@@ -170,6 +202,7 @@ export class GoogleGeminiProvider implements LLMProvider {
 
     if (req.system) {
       body.systemInstruction = {
+        role: 'user',
         parts: [{ text: req.system }],
       };
     }
@@ -186,63 +219,58 @@ export class GoogleGeminiProvider implements LLMProvider {
     return body;
   }
 
+  protected shouldRetryStatus(status: number): boolean {
+    return (
+      status === 400 || status === 401 || status === 403 || status === 404
+    );
+  }
+
+  protected async fetchWithFallback(
+    urls: string[],
+    init: RequestInit
+  ): Promise<Response> {
+    let lastRes: Response | undefined;
+    let lastErr: unknown;
+
+    for (let i = 0; i < urls.length; i++) {
+      const candidateUrl = urls[i]!;
+      try {
+        const res = await fetch(candidateUrl, init);
+        if (res.ok) {
+          return res;
+        }
+        if (!lastRes) {
+          lastRes = res;
+        }
+        if (!this.shouldRetryStatus(res.status)) {
+          return res;
+        }
+      } catch (err) {
+        if (!lastErr) {
+          lastErr = err;
+        }
+      }
+    }
+
+    if (lastRes) {
+      return lastRes;
+    }
+    throw normalizeError(lastErr ?? new Error('Request failed'), this.id);
+  }
+
   async generate(
     req: GenerateRequest
   ): Promise<{ text: string; usage?: TokenUsage }> {
-    const url = this.getEndpointUrl(false);
+    const urls = this.getCandidateUrls(false);
     const headers = this.getHeaders();
     const body = this.buildBody(req);
-    const canFallbackAq = this.isDefaultBaseUrl() && this.isAqKey();
 
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: req.signal,
-      });
-    } catch (err) {
-      if (canFallbackAq) {
-        const fallbackUrl = this.getEndpointUrl(false, DEFAULT_GEMINI_BASE_URL);
-        try {
-          res = await fetch(fallbackUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: req.signal,
-          });
-        } catch (fallbackErr) {
-          throw normalizeError(fallbackErr, this.id);
-        }
-      } else {
-        throw normalizeError(err, this.id);
-      }
-    }
-
-    if (
-      !res.ok &&
-      canFallbackAq &&
-      (res.status === 400 ||
-        res.status === 401 ||
-        res.status === 403 ||
-        res.status === 404)
-    ) {
-      const fallbackUrl = this.getEndpointUrl(false, DEFAULT_GEMINI_BASE_URL);
-      try {
-        const fallbackRes = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-          signal: req.signal,
-        });
-        if (fallbackRes.ok) {
-          res = fallbackRes;
-        }
-      } catch {
-        // 保留原始回應錯誤供下方解析
-      }
-    }
+    const res = await this.fetchWithFallback(urls, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: req.signal,
+    });
 
     if (!res.ok) {
       let rawDetail: unknown;
@@ -271,60 +299,16 @@ export class GoogleGeminiProvider implements LLMProvider {
   }
 
   async *stream(req: GenerateRequest): AsyncIterable<{ delta: string }> {
-    const url = this.getEndpointUrl(true);
+    const urls = this.getCandidateUrls(true);
     const headers = this.getHeaders();
     const body = this.buildBody(req);
-    const canFallbackAq = this.isDefaultBaseUrl() && this.isAqKey();
 
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: req.signal,
-      });
-    } catch (err) {
-      if (canFallbackAq) {
-        const fallbackUrl = this.getEndpointUrl(true, DEFAULT_GEMINI_BASE_URL);
-        try {
-          res = await fetch(fallbackUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: req.signal,
-          });
-        } catch (fallbackErr) {
-          throw normalizeError(fallbackErr, this.id);
-        }
-      } else {
-        throw normalizeError(err, this.id);
-      }
-    }
-
-    if (
-      !res.ok &&
-      canFallbackAq &&
-      (res.status === 400 ||
-        res.status === 401 ||
-        res.status === 403 ||
-        res.status === 404)
-    ) {
-      const fallbackUrl = this.getEndpointUrl(true, DEFAULT_GEMINI_BASE_URL);
-      try {
-        const fallbackRes = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-          signal: req.signal,
-        });
-        if (fallbackRes.ok) {
-          res = fallbackRes;
-        }
-      } catch {
-        // 保留原始回應錯誤
-      }
-    }
+    const res = await this.fetchWithFallback(urls, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: req.signal,
+    });
 
     if (!res.ok) {
       let rawDetail: unknown;
@@ -379,6 +363,7 @@ export class GoogleGeminiProvider implements LLMProvider {
 
   async ping(signal?: AbortSignal): Promise<PingResult> {
     const startTime = Date.now();
+    const primaryModel = this.normalizeModelId(this.options.model);
     try {
       await this.generate({
         system: 'Connection test',
@@ -391,9 +376,32 @@ export class GoogleGeminiProvider implements LLMProvider {
       return {
         ok: true,
         latencyMs: Date.now() - startTime,
-        modelEcho: this.normalizeModelId(this.options.model),
+        modelEcho: primaryModel,
       };
     } catch (err) {
+      if (this.isAqKey() && primaryModel !== 'gemini-2.0-flash') {
+        try {
+          const fallbackProvider = new GoogleGeminiProvider({
+            ...this.options,
+            model: 'gemini-2.0-flash',
+          });
+          await fallbackProvider.generate({
+            system: 'Connection test',
+            user: 'ping',
+            temperature: 0,
+            maxOutputTokens: 20,
+            signal,
+          });
+          return {
+            ok: true,
+            latencyMs: Date.now() - startTime,
+            modelEcho: 'gemini-2.0-flash',
+          };
+        } catch {
+          // 保留主模型錯誤資訊
+        }
+      }
+
       return {
         ok: false,
         latencyMs: Date.now() - startTime,

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mapcraft-v2';
+const CACHE_NAME = 'mapcraft-v3';
 
 const STATIC_PRECACHE = [
   './',
@@ -36,7 +36,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 請求攔截：靜態資源快取優先，外部 LLM 請求絕不干擾
+// 請求攔截：HTML 導覽使用 Network-First 確保部署更新即時生效，靜態資源使用 Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -49,7 +49,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. 靜態資源使用 Stale-While-Revalidate 策略
+  const acceptHeader = event.request.headers.get('accept') || '';
+  const isHtmlNavigation =
+    event.request.mode === 'navigate' ||
+    acceptHeader.includes('text/html') ||
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('/index.html');
+
+  // 2. HTML 與頁面導覽採用 Network-First，避免舊版 index.html 卡住新版 JS bundle
+  if (isHtmlNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (
+            networkResponse &&
+            networkResponse.status === 200 &&
+            networkResponse.type === 'basic'
+          ) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 3. 其他靜態資源使用 Stale-While-Revalidate 策略
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
@@ -72,4 +101,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-

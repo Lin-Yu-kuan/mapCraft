@@ -95,11 +95,17 @@ export function normalizeError(
 
   // 2. HTTP 狀態碼判斷
   if (httpStatus === 401 || httpStatus === 403) {
+    const detailSuffix =
+      safeMessage &&
+      safeMessage !== 'Error' &&
+      safeMessage !== '[object Object]'
+        ? `（${safeMessage}）`
+        : '';
     return {
       code: 'UNAUTHORIZED',
       httpStatus,
       providerId,
-      messageForUser: '金鑰無效、權限不足，或此模型未開通。請檢查您的 API 金鑰。',
+      messageForUser: `金鑰無效、權限不足，或此模型未開通。請檢查您的 API 金鑰。${detailSuffix}`,
       raw: safeMessage,
     };
   }
