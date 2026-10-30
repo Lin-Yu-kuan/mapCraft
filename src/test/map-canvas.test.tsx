@@ -1,4 +1,4 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { MapPage } from '@/features/map/MapPage';
@@ -133,5 +133,43 @@ describe('MapPage & MapCanvas (FR-03 & AC-03)', () => {
 
     // 底部進度文字（總共 3 個學習節點：1, 1.1, 2，其中 2 是 done，進度 1/3 (33%)）
     expect(screen.getByText(/已完成 1\/3（33%）/)).toBeInTheDocument();
+  });
+
+  it('支援四合一匯出選單：點擊匯出按鈕展開選單，展示 4 種格式選項，並能正常關閉', async () => {
+    await mapsRepo.save(sampleMap);
+
+    await act(async () => {
+      renderMapPage(sampleMap.id);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('節點自訂 NodeCard')).toBeInTheDocument();
+    });
+
+    // 尋找「匯出」下拉按鈕
+    const exportBtn = screen.getByRole('button', { name: '匯出' });
+    expect(exportBtn).toBeInTheDocument();
+    expect(exportBtn).toHaveAttribute('aria-expanded', 'false');
+
+    // 點擊「匯出」展開 Popover 選單
+    await act(async () => {
+      fireEvent.click(exportBtn);
+    });
+
+    expect(exportBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('選擇匯出格式')).toBeInTheDocument();
+    expect(screen.getByText('HTML 互動手冊')).toBeInTheDocument();
+    expect(screen.getByText('Markdown 筆記')).toBeInTheDocument();
+    expect(screen.getByText('OPML 心智圖')).toBeInTheDocument();
+    expect(screen.getByText('地圖備份（JSON）')).toBeInTheDocument();
+    expect(screen.getByText('推薦')).toBeInTheDocument();
+
+    // 按下 Escape 鍵可收合選單
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+
+    expect(screen.queryByText('選擇匯出格式')).not.toBeInTheDocument();
+    expect(exportBtn).toHaveAttribute('aria-expanded', 'false');
   });
 });

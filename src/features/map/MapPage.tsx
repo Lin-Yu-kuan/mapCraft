@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,6 +13,8 @@ import {
   Network,
   ListOrdered,
   Share2,
+  ChevronDown,
+  Database,
 } from 'lucide-react';
 
 import type { LearningMap, NodeProgress, NodeStatus, MapNode } from '@/domain/types';
@@ -70,6 +72,30 @@ export function MapPage() {
 
   // 分享地圖彈窗開關
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  // 匯出選單開關與點擊外部關閉
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isExportOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isExportOpen]);
 
   // 1. 載入地圖與進度
   useEffect(() => {
@@ -461,74 +487,160 @@ export function MapPage() {
           type="button"
           onClick={handleToggleOrderMode}
           title={orderMode ? t('map.orderModeOn') : t('map.orderModeOff')}
-          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-md transition-all cursor-pointer ${
-            orderMode
+          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-md transition-all cursor-pointer ${orderMode
               ? 'border-emerald-400 bg-emerald-50/95 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/90 dark:text-emerald-300 ring-2 ring-emerald-500/20'
               : 'border-slate-200/90 bg-white/90 text-slate-600 hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-400'
-          }`}
+            }`}
         >
           <ListOrdered className="h-3.5 w-3.5 text-emerald-600" />
           <span>{t('map.orderMode')}</span>
         </button>
       </div>
 
-      {/* 底部浮動操作：匯出與分享 */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-1.5">
+      {/* 底部浮動操作：整合式匯出與分享 */}
+      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
+        {/* 整合式匯出選單 */}
+        <div className="relative" ref={exportMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsExportOpen((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={isExportOpen}
+            aria-label={t('map.exportMenu')}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium shadow-xs backdrop-blur-md transition-all cursor-pointer ${isExportOpen
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:border-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-200 ring-2 ring-emerald-500/20'
+                : 'border-slate-200/90 bg-white/90 text-slate-700 hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800'
+              }`}
+          >
+            <Download className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-semibold">{t('map.exportMenu')}</span>
+            <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isExportOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* 向上彈出格式選擇選單 (Popover) */}
+          {isExportOpen && (
+            <div
+              role="menu"
+              aria-orientation="vertical"
+              className="absolute bottom-full left-0 mb-2 w-72 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            >
+              <div className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                {t('map.exportMenuTitle')}
+              </div>
+              <div className="space-y-0.5">
+                {/* 1. HTML 互動手冊（推薦） */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsExportOpen(false);
+                    handleExportHtml();
+                  }}
+                  className="group flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer"
+                >
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                    <FileCode className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                        {t('map.exportHtml')}
+                      </span>
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                        {t('map.recommended')}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                      {t('map.exportHtmlDesc')}
+                    </p>
+                  </div>
+                </button>
+
+                {/* 2. Markdown 筆記 */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsExportOpen(false);
+                    handleExportMarkdown();
+                  }}
+                  className="group flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer"
+                >
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                      {t('map.exportMarkdown')}
+                    </span>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                      {t('map.exportMarkdownDesc')}
+                    </p>
+                  </div>
+                </button>
+
+                {/* 3. OPML 心智圖 */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsExportOpen(false);
+                    handleExportOpml();
+                  }}
+                  className="group flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer"
+                >
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                    <Network className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                      {t('map.exportOpml')}
+                    </span>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                      {t('map.exportOpmlDesc')}
+                    </p>
+                  </div>
+                </button>
+
+                {/* 4. 地圖備份（JSON） */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsExportOpen(false);
+                    handleExportBackup();
+                  }}
+                  className="group flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer"
+                >
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                    <Database className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                      {t('map.exportBackup')}
+                    </span>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                      {t('map.exportBackupDesc')}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 分享按鈕 */}
         <button
           type="button"
-          onClick={handleExportMarkdown}
-          aria-label={t('map.exportMarkdown')}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+          onClick={() => setIsShareOpen(true)}
+          aria-label={t('share.shareBtn')}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-colors cursor-pointer"
         >
-            <FileText className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">{t('map.exportMarkdown')}</span>
-            <span className="sm:hidden">Markdown</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportHtml}
-            aria-label={t('map.exportHtml')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <FileCode className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">{t('map.exportHtml')}</span>
-            <span className="sm:hidden">HTML</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportOpml}
-            aria-label={t('map.exportOpml')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <Network className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">{t('map.exportOpml')}</span>
-            <span className="sm:hidden">OPML</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportBackup}
-            aria-label={t('map.exportBackup')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs backdrop-blur-md hover:bg-slate-50 dark:border-slate-800/90 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <Download className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">{t('map.exportBackup')}</span>
-            <span className="sm:hidden">備份</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsShareOpen(true)}
-            aria-label={t('share.shareBtn')}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition-colors"
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t('share.shareBtn')}</span>
-            <span className="sm:hidden">{t('share.shareBtnShort')}</span>
-          </button>
-        </div>
+          <Share2 className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{t('share.shareBtn')}</span>
+          <span className="sm:hidden">{t('share.shareBtnShort')}</span>
+        </button>
+      </div>
 
       {/* 低調慶祝橫條（全數完成時顯示） */}
       {showCelebration && (
