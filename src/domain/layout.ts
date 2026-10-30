@@ -75,26 +75,20 @@ export function calculateTreeLayout(
 
   treeLayout(rootHierarchy);
 
-  // 3. 找出全樹的最小 Y 座標以做平移歸零（讓左上角起點合理）
-  let minY = Infinity;
-  rootHierarchy.each((d) => {
-    const curX = d.x ?? 0;
-    if (curX < minY) {
-      minY = curX;
-    }
-  });
+  // 3. 以根節點（rootHierarchy）為基準錨點，確保展開或收合分支時根節點與全樹基準座標絕對穩定不跳動
+  const rootY = rootHierarchy.x ?? 0;
 
   const nodes: LayoutNode[] = [];
   const edges: LayoutEdge[] = [];
 
-  // 4. 走訪計算後的層級結構，轉換成由左至右 (x = d.y, y = d.x - minY)
+  // 4. 走訪計算後的層級結構，轉換成由左至右 (x = d.y, y = d.x - rootY)
   rootHierarchy.each((d) => {
     const item = d.data.node;
     const hasOriginalChildren = Boolean(item.children && item.children.length > 0);
     const originalChildrenCount = item.children ? item.children.length : 0;
     const isCollapsed = collapsedIds.has(item.id);
     const posX = d.y ?? 0;
-    const posY = (d.x ?? 0) - minY;
+    const posY = (d.x ?? 0) - rootY;
 
     nodes.push({
       id: item.id,

@@ -97,6 +97,50 @@ describe('domain/export/html (Interactive Mindmap & Lesson HTML Export)', () => 
       },
       createdAt: 1700000000000,
     },
+    {
+      mapId: 'map-html-test',
+      nodeId: '0',
+      schemaVersion: 1,
+      modelId: 'gpt-4o',
+      promptVersion: 'lesson.zh-TW.v2',
+      content: {
+        concept: 'Docker 核心架構概述',
+        why: '現代微服務基石',
+        pitfalls: [],
+        keyPoints: [],
+        markdown: `## 核心概念
+
+Docker 採用 **Client-Server** 架構。
+
+### 重點清單
+- 容器映像檔（Image）是唯讀模板
+- 容器（Container）是映像檔的執行實體
+- Docker 守護進程（dockerd）負責管理資源
+
+### 常用指令比較
+| 指令 | 說明 | 範例 |
+| :--- | :--- | :--- |
+| run | 建立並啟動 | docker run -d nginx |
+| ps | 列出容器 | docker ps -a |
+
+\`\`\`bash
+# 啟動容器
+docker run -d -p 8080:80 --name web nginx
+\`\`\`
+
+\`\`\`diagram
+[Client] ---> [Docker Daemon] ---> [Containers]
+\`\`\`
+`,
+        quiz: {
+          question: '下列何者是 Docker 的唯讀模板？',
+          options: ['Container', 'Image', 'Volume', 'Network'],
+          answerIndex: 1,
+          explanation: 'Image 是容器的靜態唯讀模板。',
+        },
+      },
+      createdAt: 1700000000000,
+    },
   ];
 
   it('產出包含完整宣告與獨立樣式腳本的單一 HTML 檔案', () => {
@@ -115,5 +159,31 @@ describe('domain/export/html (Interactive Mindmap & Lesson HTML Export)', () => 
     expect(html).toContain('智慧農業感測節點');
     expect(html).toContain('離線無人機即時數據分析');
     expect(html).toContain('先用 k3s 在樹莓派上驗證原型');
+  });
+
+  it('完整保留 markdownContent 的各項語法、清單文字、表格與隨堂測驗，絕不發生文字遺失', () => {
+    const html = generateMapHtml(sampleMap, sampleProgress, sampleLessons);
+    // 內文與核心標記完整包含在靜態手冊資料中
+    expect(html).toContain('Client-Server');
+    expect(html).toContain('**Client-Server**');
+    // 清單項目文字完整無缺，未被正則錯誤清空
+    expect(html).toContain('容器映像檔（Image）是唯讀模板');
+    expect(html).toContain('容器（Container）是映像檔的執行實體');
+    expect(html).toContain('Docker 守護進程（dockerd）負責管理資源');
+    // 表格文字與語法完整存在
+    expect(html).toContain('常用指令比較');
+    expect(html).toContain('docker run -d nginx');
+    expect(html).toContain('docker ps -a');
+    // 程式碼區塊完整存在
+    expect(html).toContain('docker run -d -p 8080:80 --name web nginx');
+    // 流程與結構圖解專屬樣式（包含 diagram-window 與複製圖解按鈕，無黑底衝突）
+    expect(html).toContain('.diagram-window');
+    expect(html).toContain('.diagram-btn-copy');
+    expect(html).toContain('[Client] ---> [Docker Daemon]');
+    // 隨堂測驗題目、選項與詳解完整存在
+    expect(html).toContain('下列何者是 Docker 的唯讀模板？');
+    expect(html).toContain('Container');
+    expect(html).toContain('Image');
+    expect(html).toContain('Image 是容器的靜態唯讀模板。');
   });
 });

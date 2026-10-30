@@ -112,4 +112,21 @@ describe('domain/layout (SPEC §3.4 & §8.1)', () => {
     expect(node1?.data.hasChildren).toBe(true);
     expect(node1?.data.childrenCount).toBe(2);
   });
+
+  it('根節點錨定保證：無論如何收合或展開分支，根節點座標始終固定於原點 (0, 0)', () => {
+    // 未收合狀態
+    const layout1 = calculateTreeLayout(sampleRoot);
+    const root1 = layout1.nodes.find((n) => n.id === '0');
+    expect(root1?.position).toEqual({ x: 0, y: 0 });
+
+    // 收合第 1 支線
+    const layout2 = calculateTreeLayout(sampleRoot, new Set(['1']));
+    const root2 = layout2.nodes.find((n) => n.id === '0');
+    expect(root2?.position).toEqual({ x: 0, y: 0 });
+
+    // 收合多個支線
+    const layout3 = calculateTreeLayout(sampleRoot, new Set(['1', '2', '3']));
+    const root3 = layout3.nodes.find((n) => n.id === '0');
+    expect(root3?.position).toEqual({ x: 0, y: 0 });
+  });
 });
