@@ -29,7 +29,20 @@ export const MAP_GENERATION_JSON_SCHEMA = {
                 summary: { type: 'string' },
                 difficulty: { type: 'string', enum: ['beginner', 'intermediate', 'advanced'] },
                 estMinutes: { type: 'number' },
-                children: { type: 'array' },
+                children: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      label: { type: 'string' },
+                      summary: { type: 'string' },
+                      difficulty: { type: 'string', enum: ['beginner', 'intermediate', 'advanced'] },
+                      estMinutes: { type: 'number' },
+                    },
+                    required: ['id', 'label', 'summary', 'difficulty'],
+                  },
+                },
               },
               required: ['id', 'label', 'summary', 'difficulty'],
             },

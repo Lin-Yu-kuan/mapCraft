@@ -5,6 +5,7 @@ export interface AppSettings {
   uiLanguage: 'zh-TW' | 'zh-CN' | 'en';
   theme: 'light' | 'dark' | 'system';
   lastProviderId?: string;
+  lastBaseUrl?: string;
   lastMapModelId?: string;
   lastLessonModelId?: string;
   /** Google OAuth 2.0 Client ID（非敏感公開識別碼） */
@@ -32,15 +33,24 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
 };
 
+function migrateLegacyModelId(modelId?: string): string | undefined {
+  if (modelId === 'gemini-3.8-flash') return 'gemini-2.5-flash';
+  if (modelId === 'gemini-3.8-pro') return 'gemini-2.5-pro';
+  return modelId;
+}
+
 export const settingsRepo = {
   async getSettings(): Promise<AppSettings> {
     const record = await db.kv.get(STORAGE_SETTINGS_KEY);
     if (!record || typeof record.value !== 'object' || record.value === null) {
       return DEFAULT_SETTINGS;
     }
+    const raw = record.value as Partial<AppSettings>;
     return {
       ...DEFAULT_SETTINGS,
-      ...(record.value as Partial<AppSettings>),
+      ...raw,
+      lastMapModelId: migrateLegacyModelId(raw.lastMapModelId),
+      lastLessonModelId: migrateLegacyModelId(raw.lastLessonModelId),
     };
   },
 

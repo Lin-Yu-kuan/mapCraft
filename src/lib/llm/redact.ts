@@ -6,6 +6,7 @@
 const KEY_PATTERNS = [
   /sk-[A-Za-z0-9_-]{16,}/g,
   /AIza[0-9A-Za-z_-]{20,}/g,
+  /AQ\.[A-Za-z0-9_.-]{16,}/g,
   /ya29\.[A-Za-z0-9_-]{16,}/g,
   /Bearer\s+[A-Za-z0-9_.-]+/g,
 ];

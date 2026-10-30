@@ -158,6 +158,46 @@ describe('AnthropicProvider & GoogleGeminiProvider (SPEC §5.2)', () => {
       expect(body.generationConfig.responseSchema).toEqual({ type: 'object' });
     });
 
+    it('routes AQ. prefix API keys to Vertex AI Express Mode endpoint with fallback support', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: '{"title":"Vertex Express Map"}' }],
+              },
+            },
+          ],
+        }),
+      });
+      globalThis.fetch = fetchMock;
+
+      const provider = new GoogleGeminiProvider({
+        apiKey: 'AQ.Ab8RN6TestVertexExpressKey12345',
+        model: 'gemini-2.5-flash',
+      });
+
+      const res = await provider.generate({
+        system: 'You are Gemini.',
+        user: 'Make roadmap',
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+      });
+
+      expect(res.text).toBe('{"title":"Vertex Express Map"}');
+      const [url, options] = fetchMock.mock.calls[0] as [
+        string,
+        RequestInit & { headers: Record<string, string> },
+      ];
+      expect(url).toBe(
+        'https://aiplatform.googleapis.com/v1beta1/publishers/google/models/gemini-2.5-flash:generateContent'
+      );
+      expect(options.headers['x-goog-api-key']).toBe(
+        'AQ.Ab8RN6TestVertexExpressKey12345'
+      );
+    });
+
     it('streams chunks from Gemini streamGenerateContent SSE', async () => {
       const sseContent = [
         'data: {"candidates":[{"content":{"parts":[{"text":"Gemini"}]}}]}\n\n',
@@ -199,7 +239,7 @@ describe('AnthropicProvider & GoogleGeminiProvider (SPEC §5.2)', () => {
         json: async () => ({
           models: [
             {
-              name: 'models/gemini-3.8-flash',
+              name: 'models/gemini-2.5-flash',
               supportedGenerationMethods: ['generateContent', 'countTokens'],
             },
             {
@@ -207,7 +247,7 @@ describe('AnthropicProvider & GoogleGeminiProvider (SPEC §5.2)', () => {
               supportedGenerationMethods: ['embedContent'],
             },
             {
-              name: 'models/gemini-3.8-pro',
+              name: 'models/gemini-2.5-pro',
               supportedGenerationMethods: ['generateContent'],
             },
           ],
@@ -216,11 +256,11 @@ describe('AnthropicProvider & GoogleGeminiProvider (SPEC §5.2)', () => {
 
       const provider = new GoogleGeminiProvider({
         apiKey: 'AIzaSyTestKey123',
-        model: 'gemini-3.8-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const models = await provider.listModels();
-      expect(models).toEqual(['gemini-3.8-flash', 'gemini-3.8-pro']);
+      expect(models).toEqual(['gemini-2.5-flash', 'gemini-2.5-pro']);
     });
   });
 });

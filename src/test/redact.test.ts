@@ -33,11 +33,14 @@ describe('redact & maskKey (SPEC §7.1 & AGENTS.md §1.3)', () => {
       expect(safe).toContain('sk-…7890');
     });
 
-    it('redacts Google Gemini AIza keys', () => {
-      const raw = 'Request to https://gemini.api?key=AIzaSyABCDEF1234567890123456 failed';
+    it('redacts Google Gemini AIza and AQ. keys', () => {
+      const raw =
+        'Request to https://gemini.api?key=AIzaSyABCDEF1234567890123456 and AQ.Ab8RN6ABCDEF1234567890 failed';
       const safe = redact(raw);
       expect(safe).not.toContain('AIzaSyABCDEF1234567890123456');
+      expect(safe).not.toContain('AQ.Ab8RN6ABCDEF1234567890');
       expect(safe).toContain('AIz…3456');
+      expect(safe).toContain('AQ.…7890');
     });
 
     it('redacts Bearer authorization tokens', () => {

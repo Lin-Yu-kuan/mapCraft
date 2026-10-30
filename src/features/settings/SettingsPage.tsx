@@ -158,7 +158,7 @@ export function SettingsPage() {
       setProviderId(initialProvider);
 
       const meta = getProviderMeta(initialProvider);
-      const defaultUrl = meta?.defaultBaseUrl || '';
+      const defaultUrl = dbSettings.lastBaseUrl || meta?.defaultBaseUrl || '';
       setBaseUrl(defaultUrl);
 
       const key = getStoredApiKey(initialProvider, mode);
@@ -352,6 +352,7 @@ export function SettingsPage() {
     setStoredApiKey(providerId, apiKey.trim(), storageMode);
     await settingsRepo.saveSettings({
       lastProviderId: providerId,
+      lastBaseUrl: baseUrl.trim() || activeMeta?.defaultBaseUrl || '',
       lastMapModelId: mapModel.trim(),
       lastLessonModelId: lessonModel.trim(),
     });
@@ -370,6 +371,7 @@ export function SettingsPage() {
     // 2. 儲存非敏感設定到 Dexie
     await settingsRepo.saveSettings({
       lastProviderId: providerId,
+      lastBaseUrl: baseUrl.trim() || activeMeta?.defaultBaseUrl || '',
       lastMapModelId: mapModel.trim(),
       lastLessonModelId: lessonModel.trim(),
     });

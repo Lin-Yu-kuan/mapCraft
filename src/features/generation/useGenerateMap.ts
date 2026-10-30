@@ -88,7 +88,10 @@ export function useGenerateMap(): UseGenerateMapResult {
         const provider = createProvider(
           {
             id: providerId,
-            baseUrl: meta?.defaultBaseUrl || 'https://api.openai.com/v1',
+            baseUrl:
+              appSettings.lastBaseUrl ||
+              meta?.defaultBaseUrl ||
+              'https://api.openai.com/v1',
             model: modelToUse,
           },
           apiKey
