@@ -8,6 +8,7 @@ import type { NodeStatus } from '@/domain/types';
 export interface NodeCardCustomData extends LayoutNodeData {
   status?: NodeStatus;
   selected?: boolean;
+  inFocusContext?: boolean;
   orderMode?: boolean;
   onToggleCollapse?: (nodeId: string) => void;
   onSelectNode?: (nodeId: string) => void;
@@ -39,6 +40,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
     isCollapsed,
     status = 'todo',
     selected = false,
+    inFocusContext = true,
     orderMode = true,
     onToggleCollapse,
     onSelectNode,
@@ -75,12 +77,12 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
           onSelectNode?.(node.id);
         }
       }}
-      className={`group relative flex h-[90px] w-[260px] flex-col justify-between rounded-xl border p-3 text-left shadow-xs transition-all duration-150 select-none cursor-pointer active:scale-[0.98] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+      className={`group relative flex h-[90px] w-[260px] flex-col justify-between rounded-2xl border p-3.5 text-left shadow-sm transition-all duration-200 select-none cursor-pointer active:scale-[0.98] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 ${
         isRoot
-          ? 'border-emerald-500 bg-emerald-50/80 shadow-emerald-500/10 dark:border-emerald-500 dark:bg-emerald-950/50'
+          ? 'border-emerald-500/70 bg-[#eff8f1] shadow-md shadow-emerald-900/5 dark:border-emerald-500 dark:bg-emerald-950/50'
           : selected
-            ? 'border-emerald-500 bg-white ring-2 ring-emerald-500/20 shadow-md dark:border-emerald-400 dark:bg-slate-900'
-            : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700'
+            ? 'border-emerald-500 bg-white ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-900/10 dark:border-emerald-400 dark:bg-slate-900'
+            : `border-slate-200/90 bg-white/95 shadow-sm shadow-slate-900/5 hover:border-emerald-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 ${!inFocusContext ? 'opacity-40' : ''}`
       }`}
     >
       {/* 快捷新增分支按鈕（+） */}
@@ -127,9 +129,20 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
         {!isRoot && (
           <div className="flex items-center gap-1 shrink-0">
             {status === 'done' ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label={t('nodeCard.statusDone')} />
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                {t('nodeCard.statusDone')}
+              </span>
+            ) : status === 'learning' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {t('nodeCard.statusLearning')}
+              </span>
             ) : (
-              <Circle className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-label={t('nodeCard.statusTodo')} />
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <Circle className="h-3 w-3" aria-hidden="true" />
+                {t('nodeCard.statusTodo')}
+              </span>
             )}
             <button
               type="button"
@@ -148,7 +161,7 @@ export const NodeCard = memo(function NodeCard({ data }: NodeProps<MapCustomNode
       </div>
 
       {/* 中間：簡短摘要 */}
-      <p className="line-clamp-1 text-[11px] text-slate-500 dark:text-slate-400" title={node.summary}>
+      <p className="line-clamp-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400" title={node.summary}>
         {node.summary}
       </p>
 

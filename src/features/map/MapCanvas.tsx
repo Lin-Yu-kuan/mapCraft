@@ -12,7 +12,7 @@ import '@xyflow/react/dist/style.css';
 
 import type { LearningMap, MapNode, NodeStatus } from '@/domain/types';
 import { calculateTreeLayout } from '@/domain/layout';
-import { walkTree } from '@/domain/tree';
+import { findNode, walkTree } from '@/domain/tree';
 import { getCollapsedStorageKey } from '@/lib/storage/keys';
 import { NodeCard, type MapCustomNode } from './NodeCard';
 
@@ -103,6 +103,27 @@ export function MapCanvas({
     return { layoutNodes: nodes, layoutEdges: edges };
   }, [map.root, collapsedIds]);
 
+  const focusContextIds = useMemo(() => {
+    const context = new Set<string>();
+    if (!selectedNodeId) return context;
+
+    const parents = new Map<string, string>();
+    walkTree(map.root, (node, parent) => {
+      if (parent) parents.set(node.id, parent.id);
+    });
+
+    const selectedNode = findNode(map.root, selectedNodeId);
+    if (!selectedNode) return context;
+    context.add(selectedNodeId);
+    let parentId = parents.get(selectedNodeId);
+    while (parentId) {
+      context.add(parentId);
+      parentId = parents.get(parentId);
+    }
+    for (const child of selectedNode.children ?? []) context.add(child.id);
+    return context;
+  }, [map.root, selectedNodeId]);
+
   // 4. 將狀態與事件處理注入至 React Flow 節點
   const flowNodes: MapCustomNode[] = useMemo(() => {
     return layoutNodes.map((n) => ({
@@ -113,6 +134,7 @@ export function MapCanvas({
         ...n.data,
         status: progressMap[n.id] || 'todo',
         selected: n.id === selectedNodeId,
+        inFocusContext: focusContextIds.has(n.id),
         orderMode,
         onToggleCollapse: handleToggleCollapse,
         onSelectNode,
@@ -120,7 +142,7 @@ export function MapCanvas({
         onDeleteNode,
       },
     }));
-  }, [layoutNodes, progressMap, selectedNodeId, orderMode, handleToggleCollapse, onSelectNode, onAddChild, onDeleteNode]);
+  }, [layoutNodes, progressMap, selectedNodeId, focusContextIds, orderMode, handleToggleCollapse, onSelectNode, onAddChild, onDeleteNode]);
 
   const flowEdges: Edge[] = useMemo(() => {
     return layoutEdges.map((e) => ({
@@ -130,11 +152,12 @@ export function MapCanvas({
       type: e.type,
       animated: false, // 移除虛線流動，全數採用乾淨專業實線
       style: {
-        stroke: progressMap[e.target] === 'done' ? '#10b981' : '#94a3b8',
-        strokeWidth: 2,
+        stroke: progressMap[e.target] === 'done' ? '#34a879' : '#a8b7ae',
+        strokeWidth: selectedNodeId && focusContextIds.has(e.source) && focusContextIds.has(e.target) ? 2.5 : 1.5,
+        opacity: selectedNodeId && (!focusContextIds.has(e.source) || !focusContextIds.has(e.target)) ? 0.16 : 0.72,
       },
     }));
-  }, [layoutEdges, progressMap]);
+  }, [layoutEdges, progressMap, selectedNodeId, focusContextIds]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<MapCustomNode>(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(flowEdges);
@@ -150,7 +173,7 @@ export function MapCanvas({
 
   return (
     <div
-      className="relative w-full h-full select-none overflow-hidden bg-slate-50 dark:bg-slate-950"
+      className="relative w-full h-full select-none overflow-hidden bg-[#f7f8f5] dark:bg-slate-950"
       style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
     >
       <ReactFlow<MapCustomNode, Edge>
@@ -167,7 +190,7 @@ export function MapCanvas({
         maxZoom={1.8}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#cbd5e1" className="opacity-40 dark:opacity-20" />
+        <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="#94a3a0" className="opacity-25 dark:opacity-15" />
         <Controls showInteractive={false} className="bg-white shadow-sm dark:bg-slate-900" />
       </ReactFlow>
     </div>

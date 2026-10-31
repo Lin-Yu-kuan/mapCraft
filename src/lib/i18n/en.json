@@ -251,6 +251,7 @@
     "deleteAria": "Remove this node and sub-branches",
     "statusDone": "Done",
     "statusTodo": "To do",
+    "statusLearning": "Learning",
     "brainstormBadge": "Idea",
     "expandAria": "Expand {{count}} child nodes",
     "collapseAria": "Collapse child nodes"

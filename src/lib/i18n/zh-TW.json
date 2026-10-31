@@ -257,6 +257,7 @@
     "deleteAria": "移除此節點及其子分支",
     "statusDone": "已完成",
     "statusTodo": "未完成",
+    "statusLearning": "學習中",
     "brainstormBadge": "發想",
     "expandAria": "展開 {{count}} 個子節點",
     "collapseAria": "收合子節點"

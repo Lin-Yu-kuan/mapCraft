@@ -130,9 +130,32 @@ describe('MapPage & MapCanvas (FR-03 & AC-03)', () => {
     // 難度標籤
     expect(screen.getAllByText('入門').length).toBeGreaterThan(0);
     expect(screen.getByText('進階')).toBeInTheDocument();
+    expect(screen.getByText('學習中')).toBeInTheDocument();
 
     // 底部進度文字（總共 3 個學習節點：1, 1.1, 2，其中 2 是 done，進度 1/3 (33%)）
     expect(screen.getByText(/已完成 1\/3（33%）/)).toBeInTheDocument();
+  });
+
+  it('選取節點時聚焦相關路徑並淡化其他分支', async () => {
+    await mapsRepo.save(sampleMap);
+
+    await act(async () => {
+      renderMapPage(sampleMap.id);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('節點自訂 NodeCard')).toBeInTheDocument();
+      expect(screen.getByText('MiniMap 整合')).toBeInTheDocument();
+    });
+
+    const selectedNodeLabel = screen.getByText('節點自訂 NodeCard');
+    const unrelatedNodeLabel = screen.getByText('MiniMap 整合');
+    fireEvent.click(selectedNodeLabel);
+
+    await waitFor(() => {
+      expect(unrelatedNodeLabel.closest('[role="button"]')).toHaveClass('opacity-40');
+      expect(selectedNodeLabel.closest('[role="button"]')).not.toHaveClass('opacity-40');
+    });
   });
 
   it('支援四合一匯出選單：點擊匯出按鈕展開選單，展示 4 種格式選項，並能正常關閉', async () => {

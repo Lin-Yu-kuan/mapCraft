@@ -470,16 +470,20 @@ export function MapPage() {
       </div>
 
       {/* 左上角：學習狀態與模式看板 */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs text-slate-700 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-200">
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-          <span className="font-semibold">
-            {t('topbar.progressLabel', {
-              done: doneCount,
-              total: totalCount,
-              percent,
-            })}
-          </span>
+      <div className="absolute top-4 left-4 z-10 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-2">
+        <div className="min-w-44 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/95 dark:text-slate-200">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-semibold">
+              {t('topbar.progressLabel', {
+                done: doneCount,
+                total: totalCount,
+                percent,
+              })}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" aria-hidden="true">
+            <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${percent}%` }} />
+          </div>
         </div>
 
         {/* 順序模式切換按鈕 */}
